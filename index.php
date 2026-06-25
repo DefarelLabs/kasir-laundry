@@ -1,0 +1,393 @@
+<?php
+// index.php — Halaman kasir utama (input transaksi)
+require_once 'includes/config.php';
+
+$db = getDB();
+
+// ── Ambil daftar layanan aktif dari DB ────────────────────────
+$layananList = $db->query("SELECT * FROM layanan WHERE aktif=1 ORDER BY id")->fetchAll();
+
+// ── HANDLE POST: simpan transaksi ─────────────────────────────
+$notaData  = null;  // Data nota yang baru dibuat
+$errMsg    = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nama       = trim($_POST['nama'] ?? '');
+    $berat      = (float)($_POST['berat'] ?? 0);
+    $layananId  = (int)($_POST['layanan_id'] ?? 0);
+    $catatan    = trim($_POST['catatan'] ?? '');
+
+    // Validasi
+    if (!$nama || $berat <= 0 || !$layananId) {
+        $errMsg = 'Semua field wajib diisi dengan benar.';
+    } else {
+        // Ambil data layanan
+        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id=? AND aktif=1");
+        $stmtL->execute([$layananId]);
+        $layanan = $stmtL->fetch();
+
+        if (!$layanan) {
+            $errMsg = 'Layanan tidak valid.';
+        } else {
+            $total          = $berat * $layanan['harga_per_kg'];
+            $tglMasuk       = new DateTime();
+            $tglSelesai     = (clone $tglMasuk)->modify("+{$layanan['durasi_jam']} hours");
+            $noNota         = generateNoNota($db);
+
+            $stmtI = $db->prepare("
+                INSERT INTO transaksi
+                    (no_nota, nama_pelanggan, layanan_id, berat_kg, harga_per_kg, total_harga, tanggal_masuk, tanggal_selesai, catatan)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            ");
+            $stmtI->execute([
+                $noNota,
+                $nama,
+                $layananId,
+                $berat,
+                $layanan['harga_per_kg'],
+                $total,
+                $tglMasuk->format('Y-m-d H:i:s'),
+                $tglSelesai->format('Y-m-d H:i:s'),
+                $catatan ?: null,
+            ]);
+
+            $newId = $db->lastInsertId();
+
+            // Data untuk ditampilkan di form & nota
+            $notaData = [
+                'id'              => $newId,
+                'no_nota'         => $noNota,
+                'nama_pelanggan'  => $nama,
+                'nama_layanan'    => $layanan['nama'],
+                'label_durasi'    => $layanan['label_durasi'],
+                'berat_kg'        => $berat,
+                'harga_per_kg'    => $layanan['harga_per_kg'],
+                'total_harga'     => $total,
+                'tanggal_masuk'   => $tglMasuk->format('Y-m-d H:i:s'),
+                'tanggal_selesai' => $tglSelesai->format('Y-m-d H:i:s'),
+            ];
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Kasir — Permana Laundry</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --blue-dark:#0f2a4a;--blue-mid:#1565c0;--blue-light:#e3f0ff;
+      --teal:#00897b;--teal-light:#e0f2f1;
+      --white:#fff;--gray-50:#f8fafc;--gray-100:#f1f5f9;
+      --gray-200:#e2e8f0;--gray-400:#94a3b8;--gray-600:#475569;--gray-800:#1e293b;
+      --red-light:#ffebee;--red:#c62828;
+      --radius-sm:6px;--radius-md:12px;--radius-lg:20px;
+      --shadow:0 4px 24px rgba(15,42,74,.10);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(135deg,#e3f0ff 0%,#f0faf8 100%);min-height:100vh;color:var(--gray-800)}
+    .app-header{background:var(--blue-dark);color:#fff;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+    .header-left{display:flex;align-items:center;gap:14px}
+    .logo-icon{width:42px;height:42px;background:var(--teal);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .brand-name{font-size:20px;font-weight:800}
+    .brand-sub{font-size:12px;color:#90caf9;margin-top:2px}
+    .admin-link{background:rgba(255,255,255,.12);color:#fff;text-decoration:none;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;transition:background .15s}
+    .admin-link:hover{background:rgba(255,255,255,.22)}
+    .main-content{display:flex;gap:28px;padding:32px;max-width:1100px;margin:0 auto;width:100%}
+    .panel-form{flex:1;display:flex;flex-direction:column;gap:20px}
+    .card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:28px}
+    .card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--blue-mid);margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid var(--blue-light)}
+    .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    .form-group:last-child{margin-bottom:0}
+    label{font-size:13px;font-weight:600;color:var(--gray-600)}
+    label .req{color:var(--red)}
+    input[type=text],input[type=number],select,textarea{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-family:inherit;font-size:15px;color:var(--gray-800);background:var(--gray-50);outline:none;transition:border-color .18s}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue-mid);background:var(--white)}
+    .price-summary{background:linear-gradient(135deg,var(--blue-dark) 0%,#1a3a6b 100%);border-radius:var(--radius-md);padding:20px 22px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .price-label{font-size:12px;color:#90caf9;margin-bottom:3px}
+    .price-total{font-size:26px;font-weight:800}
+    .price-break{font-size:12px;color:#bbdefb;margin-top:3px}
+    .badge-dur{background:var(--teal);border-radius:var(--radius-sm);padding:8px 14px;text-align:center;flex-shrink:0}
+    .badge-dur .dl{font-size:10px;color:#b2dfdb}
+    .badge-dur .dv{font-size:18px;font-weight:700}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:12px 22px;border:none;border-radius:var(--radius-md);font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s,transform .1s;text-decoration:none;width:100%}
+    .btn:active{transform:scale(.97)}
+    .btn-primary{background:var(--blue-mid);color:#fff}
+    .btn-primary:hover{opacity:.9}
+    .btn-teal{background:var(--teal);color:#fff}
+    .btn-teal:hover{opacity:.9}
+    .btn-outline{background:transparent;border:1.5px solid var(--gray-200);color:var(--gray-600)}
+    .btn-outline:hover{background:var(--gray-100)}
+    .btn:disabled{background:var(--gray-200);color:var(--gray-400);cursor:not-allowed}
+    .error-msg{background:var(--red-light);color:var(--red);padding:12px 16px;border-radius:var(--radius-sm);border-left:4px solid var(--red);font-size:14px;margin-bottom:16px}
+    .success-msg{background:var(--teal-light);color:var(--teal);padding:12px 16px;border-radius:var(--radius-sm);border-left:4px solid var(--teal);font-size:14px;margin-bottom:16px}
+    /* ── Receipt panel ── */
+    .panel-receipt{width:290px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+    .receipt-heading{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray-600);text-align:center}
+    .receipt-wrap{background:#d8e0ea;border-radius:4px 4px 0 0;padding:0 6px;box-shadow:0 8px 32px rgba(15,42,74,.18)}
+    #receipt-area{background:var(--white);font-family:'Source Code Pro',monospace;font-size:12px;color:#1a1a1a;padding:18px 14px 20px;line-height:1.6}
+    #receipt-area::before,#receipt-area::after{content:'';display:block;height:6px;background:repeating-linear-gradient(90deg,transparent,transparent 6px,#d8e0ea 6px,#d8e0ea 12px);margin:0 -14px}
+    #receipt-area::before{margin-bottom:14px}
+    #receipt-area::after{margin-top:14px}
+    .r-logo{text-align:center;margin-bottom:10px}
+    .r-shop{font-size:16px;font-weight:600;letter-spacing:1px}
+    .r-tag{font-size:10px;color:#666;margin-top:2px}
+    .r-div{border:none;border-top:1px dashed #aaa;margin:9px 0}
+    .r-row{display:flex;justify-content:space-between;font-size:11px;gap:4px}
+    .r-key{color:#555;flex-shrink:0}
+    .r-val{text-align:right;font-weight:600;word-break:break-word}
+    .r-total{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px}
+    .r-foot{text-align:center;font-size:10px;color:#888;margin-top:10px}
+    .r-copy-label{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;border:1px dashed #aaa;padding:2px 6px;margin-bottom:8px}
+    .r-placeholder{text-align:center;padding:30px 14px;color:var(--gray-400);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px}
+    .r-placeholder .ph{font-size:34px;margin-bottom:10px}
+    @media(max-width:720px){
+      .main-content{flex-direction:column;padding:20px 16px}
+      .panel-receipt{width:100%}
+    }
+
+    /* ══════════════════════════════════════════
+       @MEDIA PRINT
+       Hanya #receipt-area yang tercetak.
+       Jika copy=2, dua nota dicetak sekaligus
+       dengan page-break di tengah (diatur JS).
+    ═════════════════════════════════════════ */
+    @media print{
+      body *{visibility:hidden}
+      #printable-area,#printable-area *{visibility:visible}
+      #printable-area{
+        position:fixed;top:0;left:0;width:80mm;
+        margin:0;padding:0;box-shadow:none
+      }
+      #printable-area::before,#printable-area::after{display:none}
+      .print-copy{page-break-after:always}
+      .print-copy:last-child{page-break-after:auto}
+      @page{size:80mm auto;margin:0}
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <div class="logo-icon">🫧</div>
+    <div>
+      <div class="brand-name">Permana Laundry</div>
+      <div class="brand-sub">Sistem Kasir</div>
+    </div>
+  </div>
+  <a href="admin/login.php" class="admin-link">⚙️ Panel Admin</a>
+</header>
+
+<main class="main-content">
+
+  <!-- ═══ FORM ═══ -->
+  <div class="panel-form">
+    <div class="card">
+      <div class="card-title">✏️ Data Transaksi Baru</div>
+
+      <?php if ($errMsg): ?>
+        <div class="error-msg">❌ <?= htmlspecialchars($errMsg) ?></div>
+      <?php endif; ?>
+      <?php if ($notaData): ?>
+        <div class="success-msg">✅ Transaksi <strong><?= htmlspecialchars($notaData['no_nota']) ?></strong> berhasil disimpan! Nota siap dicetak.</div>
+      <?php endif; ?>
+
+      <form method="POST" id="kasirForm">
+        <div class="form-group">
+          <label for="nama">Nama Pelanggan <span class="req">*</span></label>
+          <input type="text" id="nama" name="nama" placeholder="cth: Budi Santoso"
+                 value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" autocomplete="off"/>
+        </div>
+
+        <div class="form-group">
+          <label for="berat">Berat Cucian (kg) <span class="req">*</span></label>
+          <input type="number" id="berat" name="berat" placeholder="cth: 3.5"
+                 min="0.1" step="0.1" value="<?= htmlspecialchars($_POST['berat'] ?? '') ?>"/>
+        </div>
+
+        <div class="form-group">
+          <label for="layanan_id">Jenis Layanan <span class="req">*</span></label>
+          <select id="layanan_id" name="layanan_id">
+            <option value="" disabled selected>— Pilih Layanan —</option>
+            <?php foreach ($layananList as $l): ?>
+            <option value="<?= $l['id'] ?>"
+                    data-price="<?= $l['harga_per_kg'] ?>"
+                    data-hours="<?= $l['durasi_jam'] ?>"
+                    data-label="<?= htmlspecialchars($l['label_durasi']) ?>"
+                    <?= (int)($_POST['layanan_id'] ?? 0) === $l['id'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($l['nama']) ?> — <?= rupiah($l['harga_per_kg']) ?>/kg (<?= htmlspecialchars($l['label_durasi']) ?>)
+            </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="catatan">Catatan (opsional)</label>
+          <textarea id="catatan" name="catatan" rows="2"
+                    placeholder="cth: Jangan kena pemutih, ada karpet kecil…"><?= htmlspecialchars($_POST['catatan'] ?? '') ?></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">💾 Simpan & Buat Nota</button>
+      </form>
+    </div>
+
+    <!-- Ringkasan harga real-time -->
+    <div class="card" style="padding:22px 26px">
+      <div class="card-title">💰 Ringkasan Harga</div>
+      <div class="price-summary">
+        <div>
+          <div class="price-label">Total Pembayaran</div>
+          <div class="price-total" id="totalText">Rp 0</div>
+          <div class="price-break" id="breakText">Isi form untuk menghitung</div>
+        </div>
+        <div class="badge-dur" id="badgeDur" style="display:none">
+          <div class="dl">Selesai</div>
+          <div class="dv" id="badgeVal">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tombol cetak -->
+    <div class="card">
+      <div class="card-title">🖨️ Cetak Nota</div>
+      <?php if ($notaData): ?>
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:14px">
+          Pilih jumlah salinan nota yang ingin dicetak:
+        </p>
+        <button onclick="cetakNota(1)" class="btn btn-outline" style="margin-bottom:10px">
+          🖨️ Cetak 1 Lembar <span style="font-size:12px;font-weight:400">(Untuk Pelanggan)</span>
+        </button>
+        <button onclick="cetakNota(2)" class="btn btn-teal">
+          🖨️🖨️ Cetak 2 Lembar <span style="font-size:12px;font-weight:400">(Pelanggan + Arsip)</span>
+        </button>
+        <a href="index.php" class="btn btn-outline" style="margin-top:10px">➕ Transaksi Baru</a>
+      <?php else: ?>
+        <p style="font-size:13px;color:var(--gray-400);text-align:center;padding:16px 0">
+          Simpan transaksi terlebih dahulu untuk mencetak nota.
+        </p>
+        <button class="btn btn-outline" disabled>🖨️ Cetak 1 Lembar</button>
+        <button class="btn btn-outline" style="margin-top:10px" disabled>🖨️🖨️ Cetak 2 Lembar</button>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <!-- ═══ PREVIEW NOTA ═══ -->
+  <div class="panel-receipt">
+    <div class="receipt-heading">Preview Nota</div>
+    <div class="receipt-wrap">
+      <div id="receipt-area">
+        <?php if ($notaData): ?>
+          <!-- Nota terisi dari data PHP setelah POST -->
+          <?php renderNota($notaData, 1, 1) ?>
+        <?php else: ?>
+          <div class="r-placeholder">
+            <div class="ph">🧾</div>
+            Nota akan muncul di sini setelah transaksi disimpan.
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Area tersembunyi khusus untuk dicetak (1 atau 2 copy) -->
+<div id="printable-area" style="display:none"></div>
+
+<script>
+// ── Data layanan dari PHP (untuk real-time hitung di JS) ───────
+const layananData = <?php
+  $jsData = [];
+  foreach ($layananList as $l) {
+    $jsData[$l['id']] = [
+      'harga' => (int)$l['harga_per_kg'],
+      'label' => $l['label_durasi'],
+    ];
+  }
+  echo json_encode($jsData);
+?>;
+
+// ── Format Rupiah (JS) ─────────────────────────────────────────
+function fRp(n) {
+  return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
+}
+
+// ── Real-time hitung harga ─────────────────────────────────────
+function updateHarga() {
+  const berat = parseFloat(document.getElementById('berat').value);
+  const lid   = document.getElementById('layanan_id').value;
+  const totEl = document.getElementById('totalText');
+  const brkEl = document.getElementById('breakText');
+  const bdg   = document.getElementById('badgeDur');
+  const bdgV  = document.getElementById('badgeVal');
+
+  if (!lid || !berat || berat <= 0) {
+    totEl.textContent = 'Rp 0';
+    brkEl.textContent = 'Isi form untuk menghitung';
+    bdg.style.display = 'none';
+    return;
+  }
+  const d     = layananData[lid];
+  const total = berat * d.harga;
+  totEl.textContent = fRp(total);
+  brkEl.textContent = `${berat} kg × ${fRp(d.harga)} / kg`;
+  bdg.style.display = 'block';
+  bdgV.textContent  = d.label;
+}
+document.getElementById('berat').addEventListener('input', updateHarga);
+document.getElementById('layanan_id').addEventListener('change', updateHarga);
+updateHarga(); // Jalankan sekali saat load (kalau ada nilai dari POST)
+
+// ── Fungsi cetak nota ──────────────────────────────────────────
+// copy = 1: satu lembar (untuk pelanggan)
+// copy = 2: dua lembar (pelanggan + arsip/pemilik)
+function cetakNota(copy) {
+  <?php if ($notaData): ?>
+    // Redirect ke halaman print_nota.php dengan parameter id dan jumlah copy
+    window.open('print_nota.php?id=<?= $notaData['id'] ?>&copy=' + copy, '_blank');
+  <?php else: ?>
+    alert('Simpan transaksi terlebih dahulu!');
+  <?php endif; ?>
+}
+</script>
+
+</body>
+</html>
+<?php
+// ── Helper: render HTML nota (dipakai di preview & print) ─────
+function renderNota(array $d, int $copyNum, int $totalCopy): void {
+    $isLast  = $copyNum >= $totalCopy;
+    $labels  = [1 => 'PELANGGAN', 2 => 'ARSIP / PEMILIK'];
+    $label   = $labels[$copyNum] ?? "COPY $copyNum";
+    $tglMsk  = tglIndo($d['tanggal_masuk']);
+    $tglSls  = tglIndo($d['tanggal_selesai']);
+    ?>
+    <div class="print-copy" style="<?= !$isLast ? 'border-bottom:2px dashed #aaa;padding-bottom:12px;margin-bottom:12px' : '' ?>">
+      <?php if ($totalCopy > 1): ?>
+      <div class="r-copy-label"><?= $label ?></div>
+      <?php endif; ?>
+      <div class="r-logo">
+        <div class="r-shop">PERMANA LAUNDRY</div>
+        <div class="r-tag">Bersih · Rapi · Tepat Waktu</div>
+        <div class="r-tag">☎ 0812-3456-7890</div>
+      </div>
+      <hr class="r-div"/>
+      <div class="r-row"><span class="r-key">No. Nota</span><span class="r-val"><?= htmlspecialchars($d['no_nota']) ?></span></div>
+      <div class="r-row"><span class="r-key">Tgl Masuk</span><span class="r-val"><?= $tglMsk ?></span></div>
+      <div class="r-row"><span class="r-key">Tgl Selesai</span><span class="r-val"><?= $tglSls ?></span></div>
+      <hr class="r-div"/>
+      <div class="r-row"><span class="r-key">Pelanggan</span><span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span></div>
+      <div class="r-row"><span class="r-key">Layanan</span><span class="r-val"><?= htmlspecialchars($d['nama_layanan']) ?></span></div>
+      <div class="r-row"><span class="r-key">Durasi</span><span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span></div>
+      <div class="r-row"><span class="r-key">Berat</span><span class="r-val"><?= $d['berat_kg'] ?> kg</span></div>
+      <div class="r-row"><span class="r-key">Harga/kg</span><span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span></div>
+      <hr class="r-div"/>
+      <div class="r-total"><span>TOTAL</span><span><?= rupiah($d['total_harga']) ?></span></div>
+      <hr class="r-div"/>
+      <div class="r-foot">Terima kasih! Tunjukkan nota ini saat pengambilan.<br/>— Permana Laundry —</div>
+    </div>
+<?php } ?>

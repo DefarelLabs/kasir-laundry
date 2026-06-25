@@ -1,0 +1,174 @@
+<?php
+// admin/transaksi.php
+require_once '../includes/config.php';
+requireLogin();
+
+$db = getDB();
+
+if (isset($_GET['update_status'])) {
+    $id     = (int)$_GET['update_status'];
+    $status = $_GET['status'] ?? '';
+    if (in_array($status, ['pending','selesai','diambil'])) {
+        $db->prepare("UPDATE transaksi SET status=? WHERE id=?")->execute([$status, $id]);
+        setFlash('success', 'Status transaksi diperbarui.');
+    }
+    header('Location: transaksi.php');
+    exit;
+}
+
+$filterMode   = $_GET['mode']   ?? 'bulan';
+$filterBulan  = $_GET['bulan']  ?? date('Y-m');
+$filterTgl    = $_GET['tgl']    ?? date('Y-m-d');
+$filterStatus = $_GET['status'] ?? '';
+$search       = trim($_GET['q'] ?? '');
+
+$where  = [];
+$params = [];
+
+if ($filterMode === 'tanggal') {
+    $where[]        = "DATE(tanggal_masuk) = :tgl";
+    $params[':tgl'] = $filterTgl;
+} else {
+    $where[]          = "DATE_FORMAT(tanggal_masuk,'%Y-%m') = :bulan";
+    $params[':bulan'] = $filterBulan;
+}
+if ($filterStatus) { $where[] = "status = :status"; $params[':status'] = $filterStatus; }
+if ($search) {
+    $where[] = "(nama_pelanggan LIKE :q OR no_nota LIKE :q2)";
+    $params[':q'] = "%$search%"; $params[':q2'] = "%$search%";
+}
+
+$whereSQL = implode(' AND ', $where);
+$stmt = $db->prepare("SELECT * FROM v_transaksi_lengkap WHERE $whereSQL ORDER BY tanggal_masuk DESC");
+$stmt->execute($params);
+$rows = $stmt->fetchAll();
+
+if ($filterMode === 'tanggal') {
+    $stmtTot = $db->prepare("SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total, COALESCE(SUM(berat_kg),0) AS berat FROM transaksi WHERE DATE(tanggal_masuk)=?");
+    $stmtTot->execute([$filterTgl]);
+} else {
+    $stmtTot = $db->prepare("SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total, COALESCE(SUM(berat_kg),0) AS berat FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?");
+    $stmtTot->execute([$filterBulan]);
+}
+$totals = $stmtTot->fetch();
+$periodeLabel = $filterMode === 'tanggal' ? tglIndoDate($filterTgl) : $filterBulan;
+
+$pageTitle = 'Data Transaksi';
+require_once '../includes/admin_header.php';
+?>
+
+<style>
+@media(max-width:768px){
+  .filter-card-inner{flex-direction:column;gap:8px}
+  .filter-card-inner input,.filter-card-inner select{width:100%}
+  .tab-btns{flex-wrap:nowrap;overflow-x:auto}
+}
+</style>
+
+<!-- Filter Bar -->
+<div class="card" style="padding:16px 18px;margin-bottom:18px">
+  <div class="tab-btns" style="display:flex;gap:8px;margin-bottom:14px">
+    <a href="?mode=bulan&bulan=<?= htmlspecialchars($filterBulan) ?>&status=<?= htmlspecialchars($filterStatus) ?>&q=<?= urlencode($search) ?>"
+       class="btn <?= $filterMode==='bulan'?'btn-primary':'btn-outline' ?>" style="padding:7px 14px;font-size:13px">
+      📅 Per Bulan
+    </a>
+    <a href="?mode=tanggal&tgl=<?= htmlspecialchars($filterTgl) ?>&status=<?= htmlspecialchars($filterStatus) ?>&q=<?= urlencode($search) ?>"
+       class="btn <?= $filterMode==='tanggal'?'btn-primary':'btn-outline' ?>" style="padding:7px 14px;font-size:13px">
+      🗓️ Per Tanggal
+    </a>
+  </div>
+  <form method="GET">
+    <input type="hidden" name="mode" value="<?= htmlspecialchars($filterMode) ?>"/>
+    <div class="filter-card-inner" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <?php if ($filterMode === 'tanggal'): ?>
+        <input type="date" name="tgl" value="<?= htmlspecialchars($filterTgl) ?>" style="width:auto"/>
+      <?php else: ?>
+        <input type="month" name="bulan" value="<?= htmlspecialchars($filterBulan) ?>" style="width:auto"/>
+      <?php endif; ?>
+      <select name="status" style="width:auto">
+        <option value="">— Semua Status —</option>
+        <option value="pending"  <?= $filterStatus==='pending'?'selected':'' ?>>Pending</option>
+        <option value="selesai"  <?= $filterStatus==='selesai'?'selected':'' ?>>Selesai</option>
+        <option value="diambil"  <?= $filterStatus==='diambil'?'selected':'' ?>>Diambil</option>
+      </select>
+      <input type="text" name="q" placeholder="🔍 Cari nama / nota…" value="<?= htmlspecialchars($search) ?>" style="width:200px"/>
+      <button type="submit" class="btn btn-primary" style="padding:9px 16px">Cari</button>
+      <a href="transaksi.php" class="btn btn-outline" style="padding:9px 16px">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- Stat ringkasan -->
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card">
+    <div class="stat-icon blue">🧺</div>
+    <div><div class="stat-label">Total Order</div><div class="stat-value"><?= $totals['jml'] ?></div><div class="stat-sub"><?= $periodeLabel ?></div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon teal">💰</div>
+    <div><div class="stat-label">Pendapatan</div><div class="stat-value" style="font-size:15px"><?= rupiah($totals['total']) ?></div><div class="stat-sub"><?= $periodeLabel ?></div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange">⚖️</div>
+    <div><div class="stat-label">Total Berat</div><div class="stat-value"><?= number_format($totals['berat'],1) ?> kg</div></div>
+  </div>
+</div>
+
+<!-- Tabel -->
+<div class="card">
+  <div class="card-title">📋 Transaksi — <?= htmlspecialchars($periodeLabel) ?>
+    <span style="font-size:12px;color:var(--gray-400);font-weight:400;margin-left:8px">(<?= count($rows) ?> data)</span>
+  </div>
+  <?php if (empty($rows)): ?>
+    <div style="text-align:center;padding:36px;color:var(--gray-400)"><div style="font-size:32px;margin-bottom:10px">📭</div>Tidak ada transaksi.</div>
+  <?php else: ?>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th>
+          <th>Berat</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th>
+          <th>Status</th><th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($rows as $i => $t): ?>
+        <tr>
+          <td style="color:var(--gray-400);font-size:12px"><?= $i+1 ?></td>
+          <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
+          <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
+          <td style="font-size:13px"><?= htmlspecialchars($t['nama_layanan']) ?><br/><span style="color:var(--gray-400);font-size:11px"><?= $t['label_durasi'] ?></span></td>
+          <td><?= $t['berat_kg'] ?> kg</td>
+          <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
+          <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_masuk']) ?></td>
+          <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_selesai']) ?></td>
+          <td>
+            <form method="GET" style="display:inline-flex;gap:4px">
+              <input type="hidden" name="update_status" value="<?= $t['id'] ?>"/>
+              <select name="status" onchange="this.form.submit()" style="padding:4px 6px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:12px;font-family:inherit">
+                <option value="pending" <?= $t['status']==='pending'?'selected':'' ?>>🕐 Pending</option>
+                <option value="selesai" <?= $t['status']==='selesai'?'selected':'' ?>>✅ Selesai</option>
+                <option value="diambil" <?= $t['status']==='diambil'?'selected':'' ?>>🏠 Diambil</option>
+              </select>
+            </form>
+          </td>
+          <td style="white-space:nowrap">
+            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=1" target="_blank" class="btn btn-outline btn-sm" title="Cetak 1">🖨️×1</a>
+            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm" title="Cetak 2">🖨️×2</a>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--blue-light)">
+          <td colspan="5" style="font-weight:700;padding:10px 12px">TOTAL</td>
+          <td style="font-weight:800;color:var(--blue-mid)"><?= rupiah(array_sum(array_column($rows,'total_harga'))) ?></td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <?php endif; ?>
+</div>
+
+<?php require_once '../includes/admin_footer.php'; ?>

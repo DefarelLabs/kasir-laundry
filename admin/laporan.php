@@ -1,0 +1,461 @@
+<?php
+// admin/laporan.php — Laporan rekap dengan range tanggal & pengeluaran
+require_once '../includes/config.php';
+requireLogin();
+
+$db = getDB();
+
+// ── Tentukan preset & range tanggal ───────────────────────────
+// Preset dikirim via GET['preset']. Untuk custom, user isi tgl_mulai & tgl_akhir.
+// Preset selain 'custom' SELALU menghitung ulang tanggalnya di PHP —
+// jadi tidak ada kemungkinan "tergeser" ke custom.
+
+$preset   = $_GET['preset'] ?? 'hari_ini';
+$today    = date('Y-m-d');
+
+switch ($preset) {
+    case 'hari_ini':
+        $tglMulai = $tglAkhir = $today;
+        break;
+    case '1_minggu':
+        $tglMulai = date('Y-m-d', strtotime('-6 days'));
+        $tglAkhir = $today;
+        break;
+    case '2_minggu':
+        $tglMulai = date('Y-m-d', strtotime('-13 days'));
+        $tglAkhir = $today;
+        break;
+    case '3_minggu':
+        $tglMulai = date('Y-m-d', strtotime('-20 days'));
+        $tglAkhir = $today;
+        break;
+    case '1_bulan':
+        $tglMulai = date('Y-m-d', strtotime('-29 days'));
+        $tglAkhir = $today;
+        break;
+    case 'custom':
+        // Gunakan input user, fallback ke hari ini jika kosong
+        $tglMulai = $_GET['tgl_mulai'] ?? $today;
+        $tglAkhir = $_GET['tgl_akhir'] ?? $today;
+        // Pastikan format valid
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglMulai)) $tglMulai = $today;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglAkhir))  $tglAkhir = $today;
+        if ($tglMulai > $tglAkhir) [$tglMulai, $tglAkhir] = [$tglAkhir, $tglMulai];
+        break;
+    default:
+        $preset   = 'hari_ini';
+        $tglMulai = $tglAkhir = $today;
+}
+
+// Label periode untuk tampilan
+$periodeLabel = match($preset) {
+    'hari_ini' => 'Hari Ini — ' . tglIndoDate($tglMulai),
+    '1_minggu' => '1 Minggu — ' . tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
+    '2_minggu' => '2 Minggu — ' . tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
+    '3_minggu' => '3 Minggu — ' . tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
+    '1_bulan'  => '1 Bulan — ' . tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
+    'custom'   => tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
+    default    => '',
+};
+
+// ── QUERY: Ringkasan transaksi ────────────────────────────────
+$stmtRingkas = $db->prepare("
+    SELECT
+        COUNT(*)                       AS jml_order,
+        COALESCE(SUM(total_harga), 0)  AS total_pendapatan,
+        COALESCE(SUM(berat_kg), 0)     AS total_berat,
+        SUM(status='diambil')          AS sudah_diambil
+    FROM transaksi
+    WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
+");
+$stmtRingkas->execute([$tglMulai, $tglAkhir]);
+$ringkas = $stmtRingkas->fetch();
+
+// ── QUERY: Pengeluaran periode ────────────────────────────────
+$stmtPengeluaran = $db->prepare("
+    SELECT COALESCE(SUM(jumlah),0) AS total_pengeluaran, COUNT(*) AS jml_pengeluaran
+    FROM pengeluaran WHERE tanggal BETWEEN ? AND ?
+");
+$stmtPengeluaran->execute([$tglMulai, $tglAkhir]);
+$dataPengeluaran = $stmtPengeluaran->fetch();
+
+$totalPendapatan  = (float)$ringkas['total_pendapatan'];
+$totalPengeluaran = (float)$dataPengeluaran['total_pengeluaran'];
+$labaBersih       = $totalPendapatan - $totalPengeluaran;
+
+// ── QUERY: Rekap per hari ─────────────────────────────────────
+$stmtHarian = $db->prepare("
+    SELECT DATE(tanggal_masuk) AS tgl, COUNT(*) AS jml_order,
+           SUM(berat_kg) AS total_berat, SUM(total_harga) AS total_pendapatan
+    FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
+    GROUP BY DATE(tanggal_masuk) ORDER BY tgl DESC
+");
+$stmtHarian->execute([$tglMulai, $tglAkhir]);
+$dataHarian = $stmtHarian->fetchAll();
+
+// ── QUERY: Rekap per layanan ──────────────────────────────────
+$stmtLayanan = $db->prepare("
+    SELECT l.nama, l.label_durasi, COUNT(t.id) AS jml,
+           SUM(t.berat_kg) AS total_berat, SUM(t.total_harga) AS total_harga
+    FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
+    WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
+    GROUP BY l.id, l.nama, l.label_durasi ORDER BY total_harga DESC
+");
+$stmtLayanan->execute([$tglMulai, $tglAkhir]);
+$dataLayanan = $stmtLayanan->fetchAll();
+
+// ── QUERY: Detail pengeluaran ─────────────────────────────────
+$stmtDetPengeluaran = $db->prepare("
+    SELECT * FROM pengeluaran WHERE tanggal BETWEEN ? AND ?
+    ORDER BY tanggal DESC, id DESC
+");
+$stmtDetPengeluaran->execute([$tglMulai, $tglAkhir]);
+$detailPengeluaran = $stmtDetPengeluaran->fetchAll();
+
+// ── QUERY: Top 5 pelanggan ────────────────────────────────────
+$stmtTop = $db->prepare("
+    SELECT nama_pelanggan, COUNT(*) AS jml, SUM(total_harga) AS total
+    FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
+    GROUP BY nama_pelanggan ORDER BY jml DESC LIMIT 5
+");
+$stmtTop->execute([$tglMulai, $tglAkhir]);
+$topPelanggan = $stmtTop->fetchAll();
+
+// ── QUERY: Semua transaksi untuk export CSV ───────────────────
+$stmtExport = $db->prepare("
+    SELECT t.no_nota, t.nama_pelanggan, l.nama AS layanan,
+           t.berat_kg, t.harga_per_kg, t.total_harga,
+           t.tanggal_masuk, t.status
+    FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
+    WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
+    ORDER BY t.tanggal_masuk DESC
+");
+$stmtExport->execute([$tglMulai, $tglAkhir]);
+$dataExport = $stmtExport->fetchAll();
+
+$pageTitle = 'Laporan';
+require_once '../includes/admin_header.php';
+?>
+
+<style>
+/* Responsive laporan */
+.laporan-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.keuangan-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
+.keuangan-cell{padding:16px 18px}
+.keuangan-cell+.keuangan-cell{border-left:1.5px solid var(--gray-200)}
+.preset-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.preset-btn{padding:8px 14px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);background:var(--white);color:var(--gray-600);font-family:inherit;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s;display:inline-block;text-align:center}
+.preset-btn:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-mid)}
+.preset-btn.active{background:var(--blue-mid);border-color:var(--blue-mid);color:#fff}
+.export-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:768px){
+  .laporan-grid-2{grid-template-columns:1fr}
+  .keuangan-grid{grid-template-columns:1fr}
+  .keuangan-cell+.keuangan-cell{border-left:none;border-top:1.5px solid var(--gray-200)}
+  .preset-btn{font-size:12px;padding:7px 11px}
+}
+@media print{
+  .sidebar,.topbar,.filter-card,.export-btns,.btn-hamburger{display:none!important}
+  .main-wrap{margin-left:0!important}
+  .page-body{padding:8px!important}
+  .card{box-shadow:none!important;border:1px solid #ddd;margin-bottom:12px}
+  .laporan-grid-2{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<!-- ── Filter Periode ── -->
+<div class="card filter-card" style="margin-bottom:20px">
+
+  <!-- Tombol preset — setiap tombol adalah link langsung, BUKAN submit form -->
+  <div class="preset-btns">
+    <a href="laporan.php?preset=hari_ini"  class="preset-btn <?= $preset==='hari_ini'?'active':'' ?>">📅 Hari Ini</a>
+    <a href="laporan.php?preset=1_minggu"  class="preset-btn <?= $preset==='1_minggu'?'active':'' ?>">1️⃣ 1 Minggu</a>
+    <a href="laporan.php?preset=2_minggu"  class="preset-btn <?= $preset==='2_minggu'?'active':'' ?>">2️⃣ 2 Minggu</a>
+    <a href="laporan.php?preset=3_minggu"  class="preset-btn <?= $preset==='3_minggu'?'active':'' ?>">3️⃣ 3 Minggu</a>
+    <a href="laporan.php?preset=1_bulan"   class="preset-btn <?= $preset==='1_bulan'?'active':'' ?>">🗓️ 1 Bulan</a>
+    <a href="#"                            class="preset-btn <?= $preset==='custom'?'active':'' ?>"
+       onclick="toggleCustom(event)">✏️ Custom</a>
+  </div>
+
+  <!-- Form custom tanggal — hanya muncul saat preset=custom atau diklik -->
+  <div id="customRange" style="<?= $preset==='custom'?'':'display:none' ?>;padding-top:4px">
+    <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="hidden" name="preset" value="custom"/>
+      <label style="font-size:13px;font-weight:600;color:var(--gray-600)">Dari:</label>
+      <input type="date" name="tgl_mulai" value="<?= htmlspecialchars($tglMulai) ?>"
+             style="width:160px"/>
+      <label style="font-size:13px;font-weight:600;color:var(--gray-600)">Sampai:</label>
+      <input type="date" name="tgl_akhir" value="<?= htmlspecialchars($tglAkhir) ?>"
+             style="width:160px"/>
+      <button type="submit" class="btn btn-primary">Tampilkan</button>
+    </form>
+  </div>
+
+  <p style="margin-top:12px;font-size:13px;color:var(--gray-600)">
+    📊 Menampilkan: <strong><?= $periodeLabel ?></strong>
+  </p>
+
+  <!-- Tombol export -->
+  <div class="export-btns">
+    <button onclick="exportCSV()" class="btn btn-success" style="font-size:12px;padding:7px 14px">
+      📥 Export CSV
+    </button>
+    <button onclick="window.print()" class="btn btn-outline" style="font-size:12px;padding:7px 14px">
+      🖨️ Cetak Laporan
+    </button>
+  </div>
+</div>
+
+<!-- ── Stat Cards Utama ── -->
+<div class="stats-grid" style="margin-bottom:20px">
+  <div class="stat-card">
+    <div class="stat-icon blue">🧺</div>
+    <div>
+      <div class="stat-label">Total Order</div>
+      <div class="stat-value"><?= number_format($ringkas['jml_order']) ?></div>
+      <div class="stat-sub"><?= $ringkas['sudah_diambil'] ?> sudah diambil</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon teal">💰</div>
+    <div>
+      <div class="stat-label">Pendapatan Kotor</div>
+      <div class="stat-value" style="font-size:15px"><?= rupiah($totalPendapatan) ?></div>
+      <div class="stat-sub">dari transaksi</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon red">💸</div>
+    <div>
+      <div class="stat-label">Total Pengeluaran</div>
+      <div class="stat-value" style="font-size:15px;color:var(--red)"><?= rupiah($totalPengeluaran) ?></div>
+      <div class="stat-sub"><?= $dataPengeluaran['jml_pengeluaran'] ?> item</div>
+    </div>
+  </div>
+  <div class="stat-card" style="border:2px solid <?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
+    <div class="stat-icon <?= $labaBersih >= 0 ? 'green' : 'red' ?>"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?></div>
+    <div>
+      <div class="stat-label">Laba Bersih</div>
+      <div class="stat-value" style="font-size:15px;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
+        <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
+      </div>
+      <div class="stat-sub"><?= $labaBersih >= 0 ? 'Untung' : 'Rugi' ?></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Ringkasan Keuangan ── -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title">💵 Ringkasan Keuangan — <?= $periodeLabel ?></div>
+  <div class="keuangan-grid">
+    <div class="keuangan-cell">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💰 Pendapatan Kotor</div>
+      <div style="font-size:19px;font-weight:800;color:var(--teal)"><?= rupiah($totalPendapatan) ?></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $ringkas['jml_order'] ?> transaksi · <?= number_format($ringkas['total_berat'],1) ?> kg</div>
+    </div>
+    <div class="keuangan-cell">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💸 Total Pengeluaran</div>
+      <div style="font-size:19px;font-weight:800;color:var(--red)"><?= rupiah($totalPengeluaran) ?></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $dataPengeluaran['jml_pengeluaran'] ?> item pengeluaran</div>
+    </div>
+    <div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Laba Bersih</div>
+      <div style="font-size:19px;font-weight:800;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
+        <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Pendapatan − Pengeluaran</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Grid Rekap ── -->
+<div class="laporan-grid-2">
+
+  <!-- Rekap per hari -->
+  <div class="card">
+    <div class="card-title">📅 Rekap Per Hari</div>
+    <?php if (empty($dataHarian)): ?>
+      <p style="color:var(--gray-400);text-align:center;padding:20px">Tidak ada data.</p>
+    <?php else: ?>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tanggal</th><th>Order</th><th>Berat</th><th>Pendapatan</th></tr></thead>
+        <tbody>
+          <?php foreach ($dataHarian as $h): ?>
+          <tr>
+            <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
+            <td><?= $h['jml_order'] ?></td>
+            <td><?= number_format($h['total_berat'],1) ?> kg</td>
+            <td><?= rupiah($h['total_pendapatan']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--blue-light);font-weight:700">
+            <td>TOTAL</td>
+            <td><?= array_sum(array_column($dataHarian,'jml_order')) ?></td>
+            <td><?= number_format(array_sum(array_column($dataHarian,'total_berat')),1) ?> kg</td>
+            <td><?= rupiah(array_sum(array_column($dataHarian,'total_pendapatan'))) ?></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <?php endif; ?>
+  </div>
+
+  <!-- Rekap per layanan -->
+  <div class="card">
+    <div class="card-title">🧺 Rekap Per Layanan</div>
+    <?php if (empty($dataLayanan)): ?>
+      <p style="color:var(--gray-400);text-align:center;padding:20px">Tidak ada data.</p>
+    <?php else: ?>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layanan</th><th>Order</th><th>Berat</th><th>Total</th></tr></thead>
+        <tbody>
+          <?php foreach ($dataLayanan as $l): ?>
+          <tr>
+            <td>
+              <strong><?= htmlspecialchars($l['nama']) ?></strong>
+              <br/><span style="font-size:11px;color:var(--gray-400)"><?= $l['label_durasi'] ?></span>
+            </td>
+            <td><?= $l['jml'] ?></td>
+            <td><?= number_format($l['total_berat'],1) ?> kg</td>
+            <td><?= rupiah($l['total_harga']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
+  </div>
+</div>
+
+<!-- ── Detail Pengeluaran ── -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title">💸 Detail Pengeluaran — <?= $periodeLabel ?></div>
+  <?php if (empty($detailPengeluaran)): ?>
+    <div style="text-align:center;padding:24px;color:var(--gray-400)">
+      <div style="font-size:28px;margin-bottom:8px">🎉</div>Tidak ada pengeluaran pada periode ini.
+    </div>
+  <?php else: ?>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Catatan</th></tr></thead>
+      <tbody>
+        <?php foreach ($detailPengeluaran as $p): ?>
+        <tr>
+          <td style="white-space:nowrap;font-size:13px"><?= tglIndoDate($p['tanggal']) ?></td>
+          <td><strong><?= htmlspecialchars($p['keterangan']) ?></strong></td>
+          <td style="color:var(--red);font-weight:700"><?= rupiah($p['jumlah']) ?></td>
+          <td style="font-size:12px;color:var(--gray-600)"><?= $p['catatan'] ? htmlspecialchars($p['catatan']) : '<span style="color:var(--gray-400)">—</span>' ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--red-light);font-weight:700">
+          <td colspan="2" style="padding:10px 12px">TOTAL PENGELUARAN</td>
+          <td style="color:var(--red);font-weight:800"><?= rupiah($totalPengeluaran) ?></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <?php endif; ?>
+</div>
+
+<!-- ── Top Pelanggan ── -->
+<div class="card">
+  <div class="card-title">⭐ Top 5 Pelanggan</div>
+  <?php if (empty($topPelanggan)): ?>
+    <p style="color:var(--gray-400);text-align:center;padding:20px">Tidak ada data.</p>
+  <?php else: ?>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Nama Pelanggan</th><th>Jumlah Order</th><th>Total Belanja</th></tr></thead>
+      <tbody>
+        <?php foreach ($topPelanggan as $i => $p): ?>
+        <tr>
+          <td><?= ['🥇','🥈','🥉','4️⃣','5️⃣'][$i] ?? ($i+1) ?></td>
+          <td><strong><?= htmlspecialchars($p['nama_pelanggan']) ?></strong></td>
+          <td><?= $p['jml'] ?> kali</td>
+          <td><?= rupiah($p['total']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php endif; ?>
+</div>
+
+<!-- Data export tersembunyi untuk JS CSV -->
+<script>
+// ── Toggle custom date range ──────────────────────────────────
+function toggleCustom(e){
+  e.preventDefault();
+  var el = document.getElementById('customRange');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Export CSV ────────────────────────────────────────────────
+function exportCSV(){
+  var rows = [
+    // Header
+    ['Laporan Kasir Permana Laundry'],
+    ['Periode: <?= addslashes($periodeLabel) ?>'],
+    ['Dicetak: ' + new Date().toLocaleString('id-ID')],
+    [],
+    ['=== TRANSAKSI ==='],
+    ['No. Nota','Pelanggan','Layanan','Berat (kg)','Harga/kg','Total','Tgl Masuk','Status'],
+    <?php foreach ($dataExport as $r): ?>
+    [
+      '<?= addslashes($r['no_nota']) ?>',
+      '<?= addslashes($r['nama_pelanggan']) ?>',
+      '<?= addslashes($r['layanan']) ?>',
+      '<?= $r['berat_kg'] ?>',
+      '<?= $r['harga_per_kg'] ?>',
+      '<?= $r['total_harga'] ?>',
+      '<?= date('d/m/Y H:i', strtotime($r['tanggal_masuk'])) ?>',
+      '<?= $r['status'] ?>'
+    ],
+    <?php endforeach; ?>
+    [],
+    ['=== PENGELUARAN ==='],
+    ['Tanggal','Keterangan','Jumlah','Catatan'],
+    <?php foreach ($detailPengeluaran as $p): ?>
+    [
+      '<?= $p['tanggal'] ?>',
+      '<?= addslashes($p['keterangan']) ?>',
+      '<?= $p['jumlah'] ?>',
+      '<?= addslashes($p['catatan'] ?? '') ?>'
+    ],
+    <?php endforeach; ?>
+    [],
+    ['=== RINGKASAN ==='],
+    ['Pendapatan Kotor','<?= $ringkas['total_pendapatan'] ?>'],
+    ['Total Pengeluaran','<?= $dataPengeluaran['total_pengeluaran'] ?>'],
+    ['Laba Bersih','<?= $labaBersih ?>'],
+  ];
+
+  var csv = rows.map(function(row){
+    return row.map(function(cell){
+      var s = String(cell ?? '').replace(/"/g,'""');
+      return '"' + s + '"';
+    }).join(',');
+  }).join('\r\n');
+
+  // BOM untuk Excel agar bisa baca karakter Indonesia
+  var blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  var periode = '<?= preg_replace('/[^a-zA-Z0-9\-_]/', '_', $preset) ?>';
+  a.href     = url;
+  a.download = 'laporan_' + periode + '_<?= date('Ymd') ?>.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+
+<?php require_once '../includes/admin_footer.php'; ?>
