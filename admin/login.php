@@ -59,6 +59,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .error-msg{background:#ffebee;color:#c62828;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;border-left:4px solid #c62828}
     .back-link{text-align:center;margin-top:18px;font-size:13px;color:#64748b}
     .back-link a{color:#1565c0;font-weight:600;text-decoration:none}
+
+    /* Memosisikan ikon mata di sebelah kanan */
+.eye-icon {
+    position: absolute;
+    right: 510px;
+    bottom: 273px;
+    cursor: pointer;
+    font-size: 18px;
+    user-select: none; /* Mencegah ikon terblok biru saat diklik 2x */
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.eye-icon:hover {
+    opacity: 1; /* Efek menyala saat di-hover */
+}
+
+@media (max-width: 768px) {
+    .eye-icon {
+        right: 70px; /* Sesuaikan posisi untuk layar kecil */
+        bottom: 255px; /* Sesuaikan posisi untuk layar kecil */
+    }
   </style>
 </head>
 <body>
@@ -84,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="password">Password</label>
         <input type="password" id="password" name="password"
                placeholder="••••••••" autocomplete="current-password"/>
+        <span id="toggle-password" class="eye-icon" title="Tampilkan Password">👁️</span>
       </div>
       <button type="submit" class="btn-login">🔐 Masuk</button>
     </form>
@@ -92,5 +115,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <a href="../index.php">← Kembali ke Kasir</a>
     </div>
   </div>
+  <script>
+    // Tangkap elemen ikon dan input-nya
+const togglePassword = document.getElementById('toggle-password');
+const password = document.getElementById('password');
+
+// Tambahkan event saat ikon diklik
+togglePassword.addEventListener('click', function () {
+    
+    // Cek apakah tipenya saat ini adalah 'password'
+    if (password.type === 'password') {
+        // Jika ya, ubah jadi teks agar terlihat
+        password.type = 'text';
+        // Ganti ikon menjadi mata tertutup (opsional)
+        togglePassword.textContent = '🙈'; 
+    } else {
+        // Jika tidak, kembalikan menjadi password (titik-titik)
+        password.type = 'password';
+        // Kembalikan ikon ke mata terbuka
+        togglePassword.textContent = '👁️'; 
+    }
+});
+  </script>
 </body>
 </html>
