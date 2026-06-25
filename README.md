@@ -1,6 +1,59 @@
 # 🫧 Permana Laundry — Sistem Kasir Web
 
-Sistem kasir berbasis PHP + MySQL untuk XAMPP.
+> Aplikasi manajemen kasir berbasis **PHP Native + MySQL** untuk usaha laundry skala kecil-menengah. Dibangun tanpa framework — ringan, mudah dikustomisasi, dan siap dijalankan di XAMPP.
+
+---
+
+## ✨ Fitur Utama
+
+### 🧾 Kasir (Transaksi Baru)
+- Input nama pelanggan, berat cucian, dan jenis layanan
+- Kalkulasi harga **real-time** (Berat × Harga/kg)
+- Nomor nota otomatis: format `PL-YYYYMMDD-001`
+- Tanggal selesai dihitung otomatis dari durasi layanan
+- Cetak nota **1 lembar** (pelanggan) atau **2 lembar** (pelanggan + arsip)
+
+### 📊 Dashboard Admin
+- Filter transaksi per tanggal — bisa mundur ke hari sebelumnya
+- Statistik harian: jumlah order, pendapatan, total berat
+- Ringkasan status: Pending / Selesai / Diambil
+
+### 📋 Data Transaksi
+- Filter per **bulan** atau **tanggal tertentu**
+- Pencarian nama pelanggan / nomor nota
+- Update status langsung dari tabel (dropdown inline)
+- Cetak ulang nota dari halaman ini
+
+### ⚙️ Kelola Layanan
+- Tambah, edit, dan nonaktifkan jenis layanan
+- Atur nama, harga/kg, dan durasi estimasi pengerjaan
+- Hapus layanan jika belum memiliki riwayat transaksi
+
+### 💸 Pengeluaran
+- Catat pengeluaran operasional (parfum, plastik, detergen, dll.)
+- Filter per bulan atau per tanggal
+- Ringkasan total pengeluaran per periode
+
+### 📈 Laporan
+- Preset cepat: Hari Ini, 1 Minggu, 2 Minggu, 1 Bulan, atau Custom
+- Ringkasan keuangan: Pendapatan Kotor — Total Pengeluaran — **Laba Bersih**
+- Rekap per hari dan per jenis layanan
+- Top 5 pelanggan terbanyak order
+- **Export CSV** untuk dianalisis di Excel (BOM UTF-8, siap dibuka langsung)
+- Tampilan print-friendly
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer      | Teknologi                                                    |
+|------------|--------------------------------------------------------------|
+| Backend    | PHP 8+ (PDO, Prepared Statements)                            |
+| Database   | MySQL 5.7+ / MariaDB (via XAMPP)                             |
+| Frontend   | HTML5, CSS3 (Flexbox/Grid), Vanilla JavaScript (ES5 compat.) |
+| Fonts      | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans), [Source Code Pro](https://fonts.google.com/specimen/Source+Code+Pro) (Google Fonts) |
+| Print      | CSS `@media print`, kertas thermal 80mm                      |
+| Keamanan   | bcrypt password hash, PDO prepared statements                |
 
 ---
 
@@ -8,183 +61,147 @@ Sistem kasir berbasis PHP + MySQL untuk XAMPP.
 
 ```
 permana-laundry/
-├── index.php              ← Halaman kasir (input transaksi)
-├── print_nota.php         ← Halaman cetak nota (1 atau 2 lembar)
-├── setup.php              ← Script setup awal (hapus setelah dijalankan!)
-├── database.sql           ← File SQL untuk membuat database
+│
+├── index.php                   ← Halaman kasir (input transaksi baru)
+├── print_nota.php              ← Halaman cetak nota thermal (1 / 2 lembar)
+├── setup.php                   ← Setup awal password admin (hapus setelah dipakai!)
+├── database.sql                ← SQL untuk membuat database & data awal
+│
+├── assets/
+│   ├── css/
+│   │   └── style.css           ← Semua stylesheet global admin panel
+│   └── js/
+│       └── script.js           ← Semua JavaScript global (sidebar, CSV export)
 │
 ├── includes/
-│   ├── config.php         ← Koneksi DB & fungsi helper
-│   ├── admin_header.php   ← Layout header sidebar admin
-│   └── admin_footer.php   ← Layout footer admin
+│   ├── config.php              ← DB connection, session, helper functions
+│   ├── admin_header.php        ← Layout: sidebar + topbar (load CSS & JS eksternal)
+│   └── admin_footer.php        ← Layout: penutup tag HTML
 │
 └── admin/
-    ├── login.php          ← Halaman login admin
-    ├── logout.php         ← Proses logout
-    ├── dashboard.php      ← Dashboard (order per tanggal)
-    ├── transaksi.php      ← Semua data transaksi + filter
-    ├── layanan.php        ← Kelola jenis layanan & harga
-    └── laporan.php        ← Laporan bulanan & tahunan
+    ├── login.php               ← Halaman login admin
+    ├── logout.php              ← Proses logout (destroy session)
+    ├── dashboard.php           ← Dashboard dengan filter tanggal
+    ├── transaksi.php           ← Semua data transaksi + filter + update status
+    ├── layanan.php             ← CRUD jenis layanan & harga
+    ├── pengeluaran.php         ← Catat & kelola pengeluaran operasional
+    └── laporan.php             ← Laporan periode + export CSV
 ```
 
 ---
 
 ## 🚀 Cara Instalasi
 
+### Prasyarat
+- [XAMPP](https://www.apachefriends.org/) (Apache + MySQL + PHP 8+)
+- Browser modern (Chrome, Firefox, Edge)
+
 ### Langkah 1 — Salin folder ke XAMPP
 
-Salin seluruh folder `permana-laundry` ke:
-
-```
+```bash
+# Salin folder proyek ke direktori htdocs XAMPP
 C:\xampp\htdocs\permana-laundry\
 ```
 
 ### Langkah 2 — Buat database
 
-1. Buka browser, akses: `http://localhost/phpmyadmin`
-2. Klik tab **"SQL"** di bagian atas
-3. Buka file `database.sql` dengan teks editor
-4. **Copy semua isi** file tersebut
-5. **Paste** ke kotak SQL di phpMyAdmin
-6. Klik tombol **"Go"** / **"Kirim"**
+1. Jalankan XAMPP, aktifkan **Apache** dan **MySQL**
+2. Buka `http://localhost/phpmyadmin`
+3. Klik tab **Import** → pilih file `database.sql` → klik **Go**
 
-Atau bisa juga:
-- Klik **"Import"** di phpMyAdmin
-- Pilih file `database.sql`
-- Klik **"Go"**
+Atau via tab **SQL**, paste seluruh isi `database.sql` lalu klik **Go**.
 
-### Langkah 3 — Setup password admin
+### Langkah 3 — Sesuaikan konfigurasi
 
-Buka browser, akses:
+Buka `includes/config.php` dan sesuaikan jika perlu:
+
+```php
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');   // username MySQL XAMPP
+define('DB_PASS', '');       // password MySQL (default: kosong)
+define('DB_NAME', 'db-kasir-laundry');
+```
+
+### Langkah 4 — Setup password admin
+
 ```
 http://localhost/permana-laundry/setup.php
 ```
 
-Ini akan membuat hash bcrypt yang benar untuk password admin.
+> ⚠️ **Penting:** Hapus `setup.php` dari server setelah langkah ini selesai!
 
-> ⚠️ **PENTING:** Hapus file `setup.php` setelah langkah ini selesai!
+### Langkah 5 — Akses aplikasi
 
-### Langkah 4 — Akses aplikasi
-
-| Halaman | URL |
-|---|---|
-| Kasir (input transaksi) | `http://localhost/permana-laundry/` |
-| Login Admin | `http://localhost/permana-laundry/admin/login.php` |
-| Dashboard Admin | `http://localhost/permana-laundry/admin/dashboard.php` |
+| Halaman              | URL                                                   |
+|----------------------|-------------------------------------------------------|
+| Kasir (input order)  | `http://localhost/permana-laundry/`                   |
+| Login Admin          | `http://localhost/permana-laundry/admin/login.php`    |
+| Dashboard Admin      | `http://localhost/permana-laundry/admin/dashboard.php`|
 
 ---
 
 ## 🔐 Akun Admin Default
 
-| Field | Value |
-|---|---|
-| Username | `admin` |
+| Field    | Value      |
+|----------|------------|
+| Username | `admin`    |
 | Password | `admin123` |
 
-> Ganti password setelah login pertama kali melalui phpMyAdmin:
+> Ganti password setelah login pertama via phpMyAdmin:
 > ```sql
 > UPDATE admin SET password = '[hash_baru]' WHERE username = 'admin';
 > ```
-> Hash bisa dibuat di: `https://bcrypt-generator.com/` (rounds: 10)
+> Generate hash baru di: [bcrypt-generator.com](https://bcrypt-generator.com/) (rounds: 10)
 
 ---
 
 ## 🖨️ Pengaturan Printer Thermal
 
-Aplikasi ini dirancang untuk printer thermal **80mm** (standar).
+Aplikasi dirancang untuk printer thermal **80mm** (standar struk toko).
 
-Untuk printer **58mm**, ubah di 2 file:
-- `print_nota.php` baris `width: 80mm` → `width: 58mm`
-- `print_nota.php` baris `size: 80mm auto` → `size: 58mm auto`
+Untuk printer **58mm**, ubah 2 baris di `print_nota.php`:
 
-Saat mencetak di browser:
-1. Klik **"Cetak 1 Lembar"** atau **"Cetak 2 Lembar"**
-2. Dialog print browser akan muncul otomatis
-3. Pilih printer thermal Anda
-4. Pastikan **"Paper Size"** sesuai (80mm atau 58mm)
-5. **Matikan "Headers and footers"** di pengaturan print
-6. **Matikan "Margins"** (set ke None)
+```css
+/* Cari dan ganti: */
+width: 80mm  →  width: 58mm
+size: 80mm auto  →  size: 58mm auto
+```
 
----
-
-## ✨ Fitur Lengkap
-
-### Kasir (index.php)
-- Input nama pelanggan, berat cucian, jenis layanan
-- Kalkulasi harga **real-time** (Berat × Harga/kg)
-- Simpan transaksi ke database
-- Cetak nota **1 lembar** (untuk pelanggan) atau **2 lembar** (pelanggan + arsip pemilik)
-- Nomor nota otomatis: format `PL-YYYYMMDD-001`
-- Tanggal selesai dihitung otomatis dari durasi layanan
-
-### Admin Dashboard
-- Filter transaksi **per tanggal** (bisa lihat tanggal sebelumnya)
-- Statistik: jumlah order, pendapatan, total berat
-- Status order: Pending → Selesai → Diambil
-- Ringkasan order per hari
-
-### Admin Transaksi
-- Filter per **bulan** dan **status**
-- Pencarian nama pelanggan / nomor nota
-- Update status langsung dari tabel (dropdown)
-- Cetak ulang nota dari sini
-
-### Admin Kelola Layanan
-- Tambah jenis layanan baru
-- Edit nama, harga, durasi layanan
-- Aktifkan / nonaktifkan layanan
-- Hapus layanan (jika belum ada transaksi)
-
-### Admin Laporan
-- Rekap **per bulan** dalam satu tahun
-- Rekap **per jenis layanan**
-- **Top 5 pelanggan** terbanyak order
-- Total pendapatan, order, berat per tahun
-- Tombol **cetak laporan** (CSS print-friendly)
+Tips cetak via browser:
+- Matikan **Headers and footers** di dialog print
+- Set **Margins** ke `None`
+- Pilih printer thermal yang sesuai
 
 ---
 
 ## 🗄️ Struktur Database
 
-### Tabel `admin`
-Menyimpan akun admin dengan password bcrypt.
-
-### Tabel `layanan`
-Jenis-jenis layanan laundry yang bisa dikelola admin:
-- kode, nama, harga_per_kg, durasi_jam, label_durasi, aktif
-
-### Tabel `transaksi`
-Setiap baris = 1 order pelanggan:
-- no_nota (unik), nama_pelanggan, layanan_id, berat_kg
-- harga_per_kg (snapshot saat transaksi), total_harga
-- tanggal_masuk, tanggal_selesai, status, catatan
-
-### View `v_transaksi_lengkap`
-JOIN antara transaksi dan layanan untuk query lebih mudah.
+| Tabel / View          | Fungsi                                                           |
+|-----------------------|------------------------------------------------------------------|
+| `admin`               | Akun admin dengan password bcrypt                                |
+| `layanan`             | Jenis layanan: kode, nama, harga/kg, durasi, status aktif        |
+| `transaksi`           | Setiap baris = 1 order pelanggan                                 |
+| `pengeluaran`         | Catatan pengeluaran operasional harian                           |
+| `v_transaksi_lengkap` | View JOIN transaksi + layanan untuk query lebih mudah            |
 
 ---
 
-## ⚙️ Konfigurasi Database
+## 🤝 Kontribusi
 
-Edit file `includes/config.php` jika pengaturan XAMPP berbeda:
+Pull request sangat disambut! Untuk perubahan besar, buka **Issue** terlebih dahulu untuk mendiskusikan yang ingin diubah.
 
-```php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');   // username MySQL XAMPP
-define('DB_PASS', '');       // password MySQL (default kosong)
-define('DB_NAME', 'permana_laundry');
-```
-
----
-
-## 🛠️ Teknologi
-
-- **Backend:** PHP 8+ (PDO untuk koneksi database)
-- **Database:** MySQL 5.7+ / MariaDB (via XAMPP)
-- **Frontend:** HTML5, CSS3 (Flexbox/Grid), Vanilla JavaScript
-- **Font:** Plus Jakarta Sans, Source Code Pro (Google Fonts)
-- **Keamanan:** Password hashing bcrypt, prepared statements PDO
+1. Fork repositori ini
+2. Buat branch fitur: `git checkout -b fitur/nama-fitur`
+3. Commit perubahan: `git commit -m 'feat: tambah fitur X'`
+4. Push ke branch: `git push origin fitur/nama-fitur`
+5. Buat Pull Request
 
 ---
 
-*Dibuat untuk Permana Laundry — Sistem Kasir Sederhana*
+## 📄 Lisensi
+
+Proyek ini menggunakan lisensi [MIT](LICENSE).
+
+---
+
+<p align="center">Dibuat dengan ☕ untuk <strong>Permana Laundry</strong></p>

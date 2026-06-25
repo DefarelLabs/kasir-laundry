@@ -405,73 +405,42 @@ require_once '../includes/admin_header.php';
 </div>
 
 <!-- Data export tersembunyi untuk JS CSV -->
+
+<?php
+$exportTransaksi = array_map(fn($r) => [
+    'no_nota'        => $r['no_nota'],
+    'nama_pelanggan' => $r['nama_pelanggan'],
+    'layanan'        => $r['layanan'],
+    'berat_kg'       => $r['berat_kg'],
+    'harga_per_kg'   => $r['harga_per_kg'],
+    'total_harga'    => $r['total_harga'],
+    'tanggal_masuk'  => date('d/m/Y H:i', strtotime($r['tanggal_masuk'])),
+    'status'         => $r['status'],
+], $dataExport);
+
+$exportPengeluaran = array_map(fn($p) => [
+    'tanggal'    => $p['tanggal'],
+    'keterangan' => $p['keterangan'],
+    'jumlah'     => $p['jumlah'],
+    'catatan'    => $p['catatan'] ?? '',
+], $detailPengeluaran);
+?>
+
+<!--
+  Inject data PHP → JS melalui satu variabel global.
+  toggleCustom() dan exportCSV() sudah ada di assets/js/script.js.
+-->
 <script>
-// ── Toggle custom date range ──────────────────────────────────
-function toggleCustom(e){
-  e.preventDefault();
-  var el = document.getElementById('customRange');
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-// ── Export CSV ────────────────────────────────────────────────
-function exportCSV(){
-  var rows = [
-    // Header
-    ['Laporan Kasir Permana Laundry'],
-    ['Periode: <?= addslashes($periodeLabel) ?>'],
-    ['Dicetak: ' + new Date().toLocaleString('id-ID')],
-    [],
-    ['=== TRANSAKSI ==='],
-    ['No. Nota','Pelanggan','Layanan','Berat (kg)','Harga/kg','Total','Tgl Masuk','Status'],
-    <?php foreach ($dataExport as $r): ?>
-    [
-      '<?= addslashes($r['no_nota']) ?>',
-      '<?= addslashes($r['nama_pelanggan']) ?>',
-      '<?= addslashes($r['layanan']) ?>',
-      '<?= $r['berat_kg'] ?>',
-      '<?= $r['harga_per_kg'] ?>',
-      '<?= $r['total_harga'] ?>',
-      '<?= date('d/m/Y H:i', strtotime($r['tanggal_masuk'])) ?>',
-      '<?= $r['status'] ?>'
-    ],
-    <?php endforeach; ?>
-    [],
-    ['=== PENGELUARAN ==='],
-    ['Tanggal','Keterangan','Jumlah','Catatan'],
-    <?php foreach ($detailPengeluaran as $p): ?>
-    [
-      '<?= $p['tanggal'] ?>',
-      '<?= addslashes($p['keterangan']) ?>',
-      '<?= $p['jumlah'] ?>',
-      '<?= addslashes($p['catatan'] ?? '') ?>'
-    ],
-    <?php endforeach; ?>
-    [],
-    ['=== RINGKASAN ==='],
-    ['Pendapatan Kotor','<?= $ringkas['total_pendapatan'] ?>'],
-    ['Total Pengeluaran','<?= $dataPengeluaran['total_pengeluaran'] ?>'],
-    ['Laba Bersih','<?= $labaBersih ?>'],
-  ];
-
-  var csv = rows.map(function(row){
-    return row.map(function(cell){
-      var s = String(cell ?? '').replace(/"/g,'""');
-      return '"' + s + '"';
-    }).join(',');
-  }).join('\r\n');
-
-  // BOM untuk Excel agar bisa baca karakter Indonesia
-  var blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  var periode = '<?= preg_replace('/[^a-zA-Z0-9\-_]/', '_', $preset) ?>';
-  a.href     = url;
-  a.download = 'laporan_' + periode + '_<?= date('Ymd') ?>.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+window.laporanData = <?= json_encode([
+    'periodeLabel'     => $periodeLabel,
+    'preset'           => $preset,
+    'tanggalCetak'     => date('Ymd'),
+    'totalPendapatan'  => (float)$ringkas['total_pendapatan'],
+    'totalPengeluaran' => (float)$dataPengeluaran['total_pengeluaran'],
+    'labaBersih'       => $labaBersih,
+    'transaksi'        => $exportTransaksi,
+    'pengeluaran'      => $exportPengeluaran,
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
 </script>
 
 <?php require_once '../includes/admin_footer.php'; ?>

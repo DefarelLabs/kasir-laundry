@@ -1,95 +1,175 @@
 <?php
 // ============================================================
 //  includes/config.php
-//  Konfigurasi koneksi database & fungsi helper global
+//  Satu-satunya file yang perlu di-require oleh semua halaman.
+//  Tanggung jawab file ini:
+//    1. Timezone
+//    2. Koneksi database (PDO, singleton)
+//    3. Session helper
+//    4. Fungsi helper global (format, generate, flash)
 // ============================================================
 
-// Timezone WIB - wajib agar jam PHP sesuai waktu Indonesia
+// ── 1. Timezone ──────────────────────────────────────────────
 date_default_timezone_set('Asia/Jakarta');
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'db-kasir-laundry');
-define('APP_NAME', 'Permana Laundry');
-define('SESSION_NAME', 'pl_admin_session');
+// ── 2. Konfigurasi Database ──────────────────────────────────
+define('DB_HOST',  'localhost');
+define('DB_USER',  'root');
+define('DB_PASS',  '');           // Kosong = default XAMPP
+define('DB_NAME',  'db-kasir-laundry');
 
-// ── Koneksi PDO ─────────────────────────────────────────────
-function getDB(): PDO {
+// ── 3. Konstanta Aplikasi ─────────────────────────────────────
+define('APP_NAME',      'Permana Laundry');
+define('SESSION_NAME',  'pl_admin_session');
+
+/*
+ * BASE_URL: URL absolut root aplikasi.
+ * Digunakan untuk redirect atau generate link aset.
+ * Sesuaikan jika nama folder berbeda dari 'permana-laundry'.
+ *
+ * Contoh hasil:  http://localhost/permana-laundry
+ */
+define('BASE_URL',
+    (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+    . '/permana-laundry'
+);
+
+// ── 4. Koneksi PDO (Singleton) ────────────────────────────────
+/**
+ * Mengembalikan instance PDO yang sama di setiap pemanggilan.
+ * Gagal → tampilkan pesan ramah dan hentikan eksekusi.
+ */
+function getDB(): PDO
+{
     static $pdo = null;
+
     if ($pdo === null) {
         try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+            $dsn = sprintf(
+                'mysql:host=%s;dbname=%s;charset=utf8mb4',
+                DB_HOST, DB_NAME
+            );
             $pdo = new PDO($dsn, DB_USER, DB_PASS, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ]);
         } catch (PDOException $e) {
-            die('<div style="font-family:monospace;padding:20px;background:#fee;color:#c00;">
-                <strong>Koneksi Database Gagal!</strong><br>
-                ' . htmlspecialchars($e->getMessage()) . '<br><br>
-                Pastikan XAMPP MySQL sudah berjalan dan database <em>db-kasir-laundry</em> sudah dibuat.
-                </div>');
+            $msg = htmlspecialchars($e->getMessage());
+            die(<<<HTML
+                <div style="font-family:monospace;padding:20px;background:#fee;color:#c00;max-width:600px;margin:40px auto;border-radius:8px">
+                    <strong>Koneksi Database Gagal!</strong><br><br>
+                    {$msg}<br><br>
+                    Pastikan MySQL XAMPP sudah berjalan dan database
+                    <em>db-kasir-laundry</em> sudah dibuat via <code>database.sql</code>.
+                </div>
+            HTML);
         }
     }
+
     return $pdo;
 }
 
-// ── Session helper ───────────────────────────────────────────
-function startSession(): void {
+// ── 5. Session Helper ─────────────────────────────────────────
+/**
+ * Memulai sesi dengan nama khusus (jika belum aktif).
+ */
+function startSession(): void
+{
     if (session_status() === PHP_SESSION_NONE) {
         session_name(SESSION_NAME);
         session_start();
     }
 }
 
-function isLoggedIn(): bool {
+/**
+ * Cek apakah admin sudah login.
+ */
+function isLoggedIn(): bool
+{
     startSession();
     return !empty($_SESSION['admin_id']);
 }
 
-function requireLogin(): void {
+/**
+ * Redirect ke login jika belum login.
+ * Dipanggil di awal setiap halaman admin yang perlu proteksi.
+ */
+function requireLogin(): void
+{
     if (!isLoggedIn()) {
         header('Location: login.php');
         exit;
     }
 }
 
-// ── Format helpers ───────────────────────────────────────────
-function rupiah(int|float $angka): string {
+// ── 6. Format Helper ─────────────────────────────────────────
+/**
+ * Format angka ke format Rupiah.
+ * Contoh: 7000 → "Rp 7.000"
+ */
+function rupiah(int|float $angka): string
+{
     return 'Rp ' . number_format($angka, 0, ',', '.');
 }
 
-function tglIndo(string $datetime): string {
-    $bulan = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
-    $ts    = strtotime($datetime);
+/**
+ * Format datetime ke format Indonesia dengan jam.
+ * Contoh: "2024-07-15 14:30:00" → "15 Jul 2024 14:30"
+ */
+function tglIndo(string $datetime): string
+{
+    $bulan = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+                  'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+    $ts = strtotime($datetime);
     return date('d', $ts) . ' ' . $bulan[(int)date('m', $ts)] . ' ' . date('Y H:i', $ts);
 }
 
-function tglIndoDate(string $date): string {
-    $bulan = ['','Januari','Februari','Maret','April','Mei','Juni',
-              'Juli','Agustus','September','Oktober','November','Desember'];
+/**
+ * Format date ke format Indonesia tanpa jam.
+ * Contoh: "2024-07-15" → "15 Juli 2024"
+ */
+function tglIndoDate(string $date): string
+{
+    $bulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     $ts = strtotime($date);
     return date('d', $ts) . ' ' . $bulan[(int)date('m', $ts)] . ' ' . date('Y', $ts);
 }
 
-// ── Generate nomor nota unik ──────────────────────────────────
-function generateNoNota(PDO $db): string {
+// ── 7. Generate Nomor Nota ────────────────────────────────────
+/**
+ * Generate nomor nota unik per hari.
+ * Format: PL-YYYYMMDD-001
+ */
+function generateNoNota(PDO $db): string
+{
     $hari = date('Ymd');
-    $stmt = $db->prepare("SELECT COUNT(*) FROM transaksi WHERE DATE(tanggal_masuk) = CURDATE()");
+    $stmt = $db->prepare('SELECT COUNT(*) FROM transaksi WHERE DATE(tanggal_masuk) = CURDATE()');
     $stmt->execute();
     $count = (int)$stmt->fetchColumn();
     return 'PL-' . $hari . '-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
 }
 
-// ── Flash message ────────────────────────────────────────────
-function setFlash(string $type, string $msg): void {
+// ── 8. Flash Message ─────────────────────────────────────────
+/**
+ * Simpan pesan flash ke session.
+ * @param string $type  'success' | 'error' | 'info'
+ * @param string $msg   Teks pesan
+ */
+function setFlash(string $type, string $msg): void
+{
     startSession();
     $_SESSION['flash'] = ['type' => $type, 'msg' => $msg];
 }
 
-function getFlash(): ?array {
+/**
+ * Ambil & hapus pesan flash dari session.
+ * @return array|null  ['type' => ..., 'msg' => ...] atau null
+ */
+function getFlash(): ?array
+{
     startSession();
     if (!empty($_SESSION['flash'])) {
         $f = $_SESSION['flash'];
