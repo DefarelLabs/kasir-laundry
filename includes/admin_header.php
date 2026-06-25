@@ -94,8 +94,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       z-index:290;
       opacity:0;
       transition:opacity .26s;
+      pointer-events:none; /* agar klik tidak mengganggu elemen di bawahnya */
     }
-    body.sidebar-open .sidebar-overlay{opacity:1}
+    body.sidebar-open .sidebar-overlay{
+      opacity:1;
+      pointer-events:auto; /* aktifkan klik untuk menutup sidebar */
+    }
 
     /* ══════════════════════════════
        MAIN WRAP
@@ -107,6 +111,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       flex-direction:column;
       min-height:100vh;
       transition:margin-left .26s;
+      min-width:0; /* agar child flex item tidak overflow */
     }
     body.sidebar-collapsed .main-wrap{
       margin-left:0;
@@ -247,6 +252,25 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     @media(max-width:420px){
       .stats-grid{ grid-template-columns:1fr; }
     }
+
+    /* ══ Global overflow protection ══ */
+    html, body { overflow-x: hidden; max-width: 100%; }
+    .page-body { overflow-x: hidden; }
+    .card { overflow-x: hidden; }
+    /* Semua table-wrap wajib scrollable */
+    .table-wrap {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
+    /* Pastikan card tidak overflow container di mobile */
+    @media(max-width:768px){
+      .card { max-width: 100%; overflow-x: hidden; }
+      /* Form input tidak melebihi lebar layar */
+      input, select, textarea { max-width: 100%; }
+      /* Stats grid value tidak overflow */
+      .stat-value { font-size: 15px !important; word-break: break-word; }
+    }
   </style>
 </head>
 <body>
@@ -306,47 +330,42 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 <script>
 /* ════════════════════════════════════════════════
    SIDEBAR TOGGLE — Desktop & Mobile
-   ════════════════════════════════════════════════
-   Desktop  : sidebar ditampilkan/disembunyikan
-              dengan class 'sidebar-collapsed' di body.
-              Main-wrap margin menyesuaikan.
-   Mobile   : sidebar slide-in dari kiri,
-              pakai class 'sidebar-open' di body.
-              Overlay gelap muncul di belakang.
-   ──────────────────────────────────────────────── */
-(function(){
+   Menggunakan DOMContentLoaded agar elemen
+   dipastikan sudah ada sebelum event listener dipasang.
+   ════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function(){
   var MOBILE_BP = 768;
   var body      = document.body;
   var overlay   = document.getElementById('sidebarOverlay');
   var btnHam    = document.getElementById('btnHamburger');
   var btnClose  = document.getElementById('btnSidebarClose');
 
+  if(!btnHam){ return; } // Guard: jika elemen tidak ditemukan
+
   function isMobile(){ return window.innerWidth <= MOBILE_BP; }
 
-  /* ── State awal ───────────────────────────────────────── */
-  // Desktop: sidebar terbuka (tidak collapsed)
-  // Mobile : sidebar tertutup (tidak open)
+  /* ── State awal ── */
   function initState(){
     if(isMobile()){
       body.classList.remove('sidebar-collapsed');
       body.classList.remove('sidebar-open');
-      if(btnHam) btnHam.setAttribute('aria-expanded','false');
+      btnHam.setAttribute('aria-expanded','false');
     } else {
       body.classList.remove('sidebar-open');
       body.classList.remove('sidebar-collapsed');
-      if(btnHam) btnHam.setAttribute('aria-expanded','true');
+      btnHam.setAttribute('aria-expanded','true');
     }
   }
 
-  /* ── Buka / tutup ─────────────────────────────────────── */
+  /* ── Buka / tutup ── */
   function openSidebar(){
     if(isMobile()){
       body.classList.add('sidebar-open');
       body.style.overflow = 'hidden';
-      if(btnHam) btnHam.setAttribute('aria-expanded','true');
+      btnHam.setAttribute('aria-expanded','true');
     } else {
       body.classList.remove('sidebar-collapsed');
-      if(btnHam) btnHam.setAttribute('aria-expanded','true');
+      btnHam.setAttribute('aria-expanded','true');
     }
   }
 
@@ -354,10 +373,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     if(isMobile()){
       body.classList.remove('sidebar-open');
       body.style.overflow = '';
-      if(btnHam) btnHam.setAttribute('aria-expanded','false');
+      btnHam.setAttribute('aria-expanded','false');
     } else {
       body.classList.add('sidebar-collapsed');
-      if(btnHam) btnHam.setAttribute('aria-expanded','false');
+      btnHam.setAttribute('aria-expanded','false');
     }
   }
 
@@ -371,19 +390,26 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     }
   }
 
-  /* ── Event listeners ──────────────────────────────────── */
-  if(btnHam)   btnHam.addEventListener('click', function(e){ e.stopPropagation(); toggleSidebar(); });
-  if(btnClose) btnClose.addEventListener('click', closeSidebar);
-  if(overlay)  overlay.addEventListener('click', closeSidebar);
+  /* ── Event listeners ── */
+  btnHam.addEventListener('click', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSidebar();
+  });
+  if(btnClose) btnClose.addEventListener('click', function(e){
+    e.preventDefault();
+    closeSidebar();
+  });
+  if(overlay) overlay.addEventListener('click', closeSidebar);
 
-  // Tutup sidebar di mobile saat klik nav item
+  /* Tutup sidebar di mobile saat klik nav item */
   document.querySelectorAll('.nav-item').forEach(function(link){
     link.addEventListener('click', function(){
       if(isMobile()) closeSidebar();
     });
   });
 
-  // Saat resize: reset state supaya tidak stuck
+  /* Saat resize: reset state */
   var resizeTimer;
   window.addEventListener('resize', function(){
     clearTimeout(resizeTimer);
@@ -391,14 +417,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
       body.style.overflow = '';
       if(!isMobile()){
         body.classList.remove('sidebar-open');
-        // Kalau sebelumnya di-mobile lalu resize ke desktop,
-        // pastikan sidebar muncul kembali
         body.classList.remove('sidebar-collapsed');
       }
     }, 100);
   });
 
-  /* ── Init ─────────────────────────────────────────────── */
   initState();
-})();
+});
 </script>

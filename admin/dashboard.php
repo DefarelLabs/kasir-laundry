@@ -24,12 +24,28 @@ require_once '../includes/admin_header.php';
 
 <form method="GET" style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
   <label style="font-weight:600;color:var(--gray-600);font-size:14px">📅 Lihat Tanggal:</label>
-  <input type="date" name="tgl" value="<?= htmlspecialchars($filterTgl) ?>" style="width:auto"/>
+  <input type="date" name="tgl" value="<?= htmlspecialchars($filterTgl) ?>" style="width:auto;max-width:100%"/>
   <button type="submit" class="btn btn-primary" style="padding:8px 16px">Tampilkan</button>
   <?php if($filterTgl !== date('Y-m-d')): ?>
     <a href="dashboard.php" class="btn btn-outline" style="padding:8px 16px">Hari Ini</a>
   <?php endif; ?>
 </form>
+
+<style>
+@media(max-width:768px){
+  /* Tabel dashboard scroll horizontal */
+  .dashboard-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    width:100%;
+  }
+  .dashboard-table-wrap table{
+    min-width:700px;
+  }
+  /* Badge status lebih compact */
+  .dashboard-table-wrap .badge{font-size:10px;padding:2px 7px}
+}
+</style>
 
 <div class="stats-grid">
   <div class="stat-card"><div class="stat-icon blue">🧺</div><div><div class="stat-label">Order Masuk</div><div class="stat-value"><?= $statHari['jumlah_order'] ?></div><div class="stat-sub"><?= $filterTglFormatted ?></div></div></div>
@@ -49,7 +65,7 @@ require_once '../includes/admin_header.php';
   <?php if (empty($transaksiHari)): ?>
     <div style="text-align:center;padding:36px;color:var(--gray-400)"><div style="font-size:36px;margin-bottom:10px">📭</div>Tidak ada transaksi pada <?= $filterTglFormatted ?></div>
   <?php else: ?>
-    <div class="table-wrap">
+    <div class="table-wrap dashboard-table-wrap">
       <table>
         <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th><th>Berat</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Status</th><th>Aksi</th></tr></thead>
         <tbody>

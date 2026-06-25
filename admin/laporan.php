@@ -143,16 +143,32 @@ require_once '../includes/admin_header.php';
 .keuangan-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
 .keuangan-cell{padding:16px 18px}
 .keuangan-cell+.keuangan-cell{border-left:1.5px solid var(--gray-200)}
-.preset-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.preset-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .preset-btn{padding:8px 14px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);background:var(--white);color:var(--gray-600);font-family:inherit;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s;display:inline-block;text-align:center}
 .preset-btn:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-mid)}
 .preset-btn.active{background:var(--blue-mid);border-color:var(--blue-mid);color:#fff}
 .export-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+/* Filter card tidak overflow */
+.filter-card{overflow:visible!important;max-width:100%}
+#customRange form{flex-wrap:wrap}
+#customRange input[type=date]{width:100%;max-width:160px}
 @media(max-width:768px){
   .laporan-grid-2{grid-template-columns:1fr}
   .keuangan-grid{grid-template-columns:1fr}
   .keuangan-cell+.keuangan-cell{border-left:none;border-top:1.5px solid var(--gray-200)}
-  .preset-btn{font-size:12px;padding:7px 11px}
+  .preset-btn{font-size:11px;padding:6px 9px}
+  .preset-btns{gap:5px}
+  /* Ringkasan keuangan font lebih kecil */
+  .keuangan-cell{padding:12px 14px}
+  .keuangan-cell div[style*="font-size:19px"]{font-size:15px!important}
+  /* Filter form wrap */
+  #customRange form{gap:6px!important}
+  #customRange input[type=date]{width:auto;flex:1;min-width:0}
+  /* Export buttons wrap */
+  .export-btns{gap:6px}
+  .export-btns .btn{font-size:11px!important;padding:6px 10px!important}
+  /* Periode label tidak overflow */
+  .filter-card p{font-size:12px;word-break:break-word}
 }
 @media print{
   .sidebar,.topbar,.filter-card,.export-btns,.btn-hamburger{display:none!important}

@@ -4,6 +4,9 @@
 //  Konfigurasi koneksi database & fungsi helper global
 // ============================================================
 
+// Timezone WIB - wajib agar jam PHP sesuai waktu Indonesia
+date_default_timezone_set('Asia/Jakarta');
+
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');

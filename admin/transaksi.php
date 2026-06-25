@@ -60,8 +60,19 @@ require_once '../includes/admin_header.php';
 <style>
 @media(max-width:768px){
   .filter-card-inner{flex-direction:column;gap:8px}
-  .filter-card-inner input,.filter-card-inner select{width:100%}
+  .filter-card-inner input,.filter-card-inner select{width:100%!important;max-width:100%}
   .tab-btns{flex-wrap:nowrap;overflow-x:auto}
+  /* Tabel scroll horizontal */
+  .transaksi-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    width:100%;
+  }
+  .transaksi-table-wrap table{
+    min-width:750px;
+  }
+  /* Select status lebih compact */
+  .transaksi-table-wrap select{min-width:100px}
 }
 </style>
 
@@ -122,7 +133,7 @@ require_once '../includes/admin_header.php';
   <?php if (empty($rows)): ?>
     <div style="text-align:center;padding:36px;color:var(--gray-400)"><div style="font-size:32px;margin-bottom:10px">📭</div>Tidak ada transaksi.</div>
   <?php else: ?>
-  <div class="table-wrap">
+  <div class="table-wrap transaksi-table-wrap">
     <table>
       <thead>
         <tr>

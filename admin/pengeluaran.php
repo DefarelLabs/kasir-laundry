@@ -65,12 +65,31 @@ require_once '../includes/admin_header.php';
 
 <style>
 .pengeluaran-layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+/*  Agar tidak nembus ke kanan  */
+.pengeluaran-layout > div {
+  min-width: 0;
+}
 @media(max-width:900px){.pengeluaran-layout{grid-template-columns:1fr}}
 @media(max-width:768px){
   .tab-row{flex-wrap:nowrap;overflow-x:auto}
   .filter-row{flex-direction:column;gap:8px}
-  .filter-row input,.filter-row select{width:100%}
+  .filter-row input,.filter-row select{width:100%!important;max-width:100%}
+  /* Form sidebar ke bawah dan tidak sticky */
   .form-sidebar{position:static!important}
+  /* Tabel scroll horizontal */
+  .pengeluaran-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    width:100%;
+  }
+  .pengeluaran-table-wrap table{
+    min-width:500px;
+    font-size:12px;
+  }
+  /* Stats grid tidak overflow */
+  .stats-grid{grid-template-columns:1fr 1fr!important}
+  /* Contoh chips tidak overflow */
+  .chip-container{flex-wrap:wrap!important}
 }
 </style>
 
@@ -119,7 +138,7 @@ require_once '../includes/admin_header.php';
       <?php if (empty($pengeluaranList)): ?>
         <div style="text-align:center;padding:32px;color:var(--gray-400)"><div style="font-size:32px;margin-bottom:10px">📭</div>Belum ada pengeluaran.</div>
       <?php else: ?>
-      <div class="table-wrap">
+      <div class="table-wrap pengeluaran-table-wrap">
         <table>
           <thead><tr><th>#</th><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Catatan</th><th>Aksi</th></tr></thead>
           <tbody>

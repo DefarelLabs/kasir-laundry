@@ -74,12 +74,33 @@ $pageTitle = 'Kelola Layanan';
 require_once '../includes/admin_header.php';
 ?>
 
-<div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start">
+<style>
+.layanan-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+@media(max-width:900px){
+  .layanan-layout{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  /* Tabel layanan scroll horizontal */
+  .layanan-table-wrap{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    width:100%;
+  }
+  .layanan-table-wrap table{
+    min-width:560px;
+    font-size:12px;
+  }
+  /* Form sidebar tidak sticky di mobile */
+  .form-sidebar-layanan{position:static!important}
+}
+</style>
+
+<div class="layanan-layout">
 
   <!-- Tabel layanan -->
   <div class="card">
     <div class="card-title">⚙️ Daftar Layanan</div>
-    <div class="table-wrap">
+    <div class="table-wrap layanan-table-wrap">
       <table>
         <thead>
           <tr>
@@ -115,7 +136,7 @@ require_once '../includes/admin_header.php';
   </div>
 
   <!-- Form tambah / edit -->
-  <div class="card">
+  <div class="card form-sidebar-layanan">
     <div class="card-title"><?= $editData ? '✏️ Edit Layanan' : '➕ Tambah Layanan' ?></div>
     <form method="POST">
       <input type="hidden" name="aksi" value="<?= $editData ? 'edit' : 'tambah' ?>"/>
