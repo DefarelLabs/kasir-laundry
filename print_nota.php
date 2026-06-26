@@ -304,6 +304,8 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
         — Permana Laundry —
       </div>
 
+      <!-- Nama Pelanggan Bawah -->
+
     </div><!-- /copy-block -->
 
     <?php if (!$isLast): ?>
