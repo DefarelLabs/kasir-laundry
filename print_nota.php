@@ -130,6 +130,28 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
       margin-top: 8px;
     }
 
+    .div-name {
+      display: flex;
+      justify-content: space-between;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .r-name {
+      font-weight: 600;
+      color: #444;
+    }
+    
+    .r-value {
+      font-weight: 900;
+      color: #111;
+      margin-top: 2px;
+      font-size: 20px;
+      font-
+    }
+
     /* ── Elemen nota ── */
     .r-logo     { text-align: center; margin-bottom: 10px; }
     .r-shop     { font-size: 15px; font-weight: 600; letter-spacing: 1px; }
@@ -297,6 +319,14 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
 
       <hr class="r-div"/>
 
+      <!-- Nama Pelanggan Bawah -->
+      <div class="div-name">
+        <span class="r-name">Pelanggan</span>
+        <span class="r-value"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
+      </div>
+
+      <hr class="r-div"/>
+
       <!-- Footer -->
       <div class="r-foot">
         Terima kasih atas kepercayaan Anda!<br/>
@@ -304,13 +334,7 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
         — Permana Laundry —
       </div>
 
-      <hr class="r-div"/>
-
-      <!-- Nama Pelanggan Bawah -->
-      <div class="r-row">
-        <span class="r-key">Pelanggan</span>
-        <span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
-      </div>
+      
 
     </div><!-- /copy-block -->
 
