@@ -304,7 +304,13 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
         — Permana Laundry —
       </div>
 
+      <hr class="r-div"/>
+
       <!-- Nama Pelanggan Bawah -->
+      <div class="r-row">
+        <span class="r-key">Pelanggan</span>
+        <span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
+      </div>
 
     </div><!-- /copy-block -->
 
