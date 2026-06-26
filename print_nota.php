@@ -237,7 +237,7 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
         <div class="r-shop">PERMANA LAUNDRY</div>
         <div class="r-tag">Bersih · Rapi · Tepat Waktu</div>
         <div class="r-tag">Jl. Contoh No. 1, Kota Anda</div>
-        <div class="r-tag">☎ 0812-3456-7890</div>
+        <div class="r-tag">☎ 0896-9150-2028</div>
       </div>
 
       <hr class="r-div"/>
