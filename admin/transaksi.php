@@ -5,6 +5,57 @@ requireLogin();
 
 $db = getDB();
 
+$db = getDB();
+
+// ▼▼ TAMBAHKAN BLOK INI ▼▼
+// ── HANDLE POST: edit transaksi ───────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_transaksi') {
+    $id        = (int)($_POST['id'] ?? 0);
+    $nama      = trim($_POST['nama_pelanggan'] ?? '');
+    $layananId = (int)($_POST['layanan_id'] ?? 0);
+    $qty       = (float)($_POST['berat_kg'] ?? 0);
+    $catatan   = trim($_POST['catatan'] ?? '');
+
+    if (!$id || !$nama || !$layananId || $qty <= 0) {
+        setFlash('error', 'Data edit transaksi tidak valid. Pastikan semua field terisi.');
+    } else {
+        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id = ?");
+        $stmtL->execute([$layananId]);
+        $layanan = $stmtL->fetch();
+
+        if (!$layanan) {
+            setFlash('error', 'Layanan tidak ditemukan.');
+        } elseif ($layanan['tipe_hitungan'] === 'satuan' && $qty != (int)$qty) {
+            setFlash('error', 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat.');
+        } else {
+            $totalBaru = $qty * $layanan['harga_per_kg'];
+            $stmtU = $db->prepare("
+                UPDATE transaksi
+                SET nama_pelanggan = ?, layanan_id = ?, berat_kg = ?, harga_per_kg = ?,
+                    total_harga = ?, tipe_hitungan = ?, catatan = ?
+                WHERE id = ?
+            ");
+            $stmtU->execute([
+                $nama, $layananId, $qty, $layanan['harga_per_kg'],
+                $totalBaru, $layanan['tipe_hitungan'], $catatan ?: null, $id
+            ]);
+            setFlash('success', "Transaksi \"$nama\" berhasil diperbarui.");
+        }
+    }
+    header('Location: transaksi.php');
+    exit;
+}
+
+// ── HANDLE: hapus transaksi ────────────────────────────────────
+if (isset($_GET['hapus'])) {
+    $id = (int)$_GET['hapus'];
+    $db->prepare("DELETE FROM transaksi WHERE id = ?")->execute([$id]);
+    setFlash('success', 'Transaksi berhasil dihapus.');
+    header('Location: transaksi.php');
+    exit;
+}
+// ▲▲ AKHIR BLOK TAMBAHAN ▲▲
+
 if (isset($_GET['update_status'])) {
     $id     = (int)$_GET['update_status'];
     $status = $_GET['status'] ?? '';
@@ -164,8 +215,14 @@ require_once '../includes/admin_header.php';
             </form>
           </td>
           <td style="white-space:nowrap">
-            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=1" target="_blank" class="btn btn-outline btn-sm" title="Cetak 1">🖨️×1</a>
-            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm" title="Cetak 2">🖨️×2</a>
+            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=1" target="_blank" class="btn btn-outline btn-sm"
+              title="Cetak 1">🖨️×1</a>
+            <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm"
+              title="Cetak 2">🖨️×2</a>
+            <button type="button" class="btn btn-warning btn-sm" title="Edit"
+              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', <?= $t['layanan_id'] ?>, <?= $t['berat_kg'] ?>, '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
+            <a href="?hapus=<?= $t['id'] ?>" class="btn btn-danger btn-sm" title="Hapus"
+              onclick="return confirm('Hapus transaksi <?= htmlspecialchars($t['no_nota'], ENT_QUOTES) ?> milik <?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>?\nData tidak bisa dikembalikan!')">🗑️</a>
           </td>
         </tr>
         <?php endforeach; ?>
