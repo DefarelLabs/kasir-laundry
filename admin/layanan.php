@@ -104,11 +104,11 @@ require_once '../includes/admin_header.php';
     <div class="table-wrap layanan-table-wrap">
       <table>
         <thead>
-  <tr>
-    <th>Kode</th><th>Nama Layanan</th><th>Harga/kg</th>
-    <th>Durasi (Jam)</th><th>Label</th><th>Tipe</th><th>Status</th><th>Aksi</th>
-  </tr>
-</thead>
+          <tr>
+            <th>Kode</th><th>Nama Layanan</th><th>Harga/kg</th>
+            <th>Durasi (Jam)</th><th>Label</th><th>Tipe</th><th>Status</th><th>Aksi</th>
+          </tr>
+        </thead>
 ...
 
         <tbody>
