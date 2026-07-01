@@ -4,11 +4,11 @@
 --  sebelum menjalankan aplikasi.
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS `db-kasir-laundry`
+CREATE DATABASE IF NOT EXISTS `db_kasir_laundry`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE `db-kasir-laundry`;
+USE `db_kasir_laundry`;
 
 -- ------------------------------------------------------------
 -- Tabel: admin

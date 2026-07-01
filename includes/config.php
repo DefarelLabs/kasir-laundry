@@ -16,7 +16,7 @@ date_default_timezone_set('Asia/Jakarta');
 define('DB_HOST',  'localhost');
 define('DB_USER',  'root');
 define('DB_PASS',  '');           // Kosong = default XAMPP
-define('DB_NAME',  'db-kasir-laundry');
+define('DB_NAME',  'db_kasir_laundry');
 
 // ── 3. Konstanta Aplikasi ─────────────────────────────────────
 define('APP_NAME',      'Permana Laundry');
@@ -25,14 +25,14 @@ define('SESSION_NAME',  'pl_admin_session');
 /*
  * BASE_URL: URL absolut root aplikasi.
  * Digunakan untuk redirect atau generate link aset.
- * Sesuaikan jika nama folder berbeda dari 'permana-laundry'.
+ * Sesuaikan jika nama folder berbeda dari 'kasir-laundry'.
  *
- * Contoh hasil:  http://localhost/permana-laundry
+ * Contoh hasil:  http://localhost/kasir-laundry
  */
 define('BASE_URL',
     (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
     . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
-    . '/permana-laundry'
+    . '/kasir-laundry'
 );
 
 // ── 4. Koneksi PDO (Singleton) ────────────────────────────────
@@ -62,7 +62,7 @@ function getDB(): PDO
                     <strong>Koneksi Database Gagal!</strong><br><br>
                     {$msg}<br><br>
                     Pastikan MySQL XAMPP sudah berjalan dan database
-                    <em>db-kasir-laundry</em> sudah dibuat via <code>database.sql</code>.
+                    <em>db_kasir_laundry</em> sudah dibuat via <code>database.sql</code>.
                 </div>
             HTML);
         }
