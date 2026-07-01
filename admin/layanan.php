@@ -104,11 +104,13 @@ require_once '../includes/admin_header.php';
     <div class="table-wrap layanan-table-wrap">
       <table>
         <thead>
-          <tr>
-            <th>Kode</th><th>Nama Layanan</th><th>Harga/kg</th>
-            <th>Durasi (Jam)</th><th>Label</th><th>Status</th><th>Aksi</th>
-          </tr>
-        </thead>
+  <tr>
+    <th>Kode</th><th>Nama Layanan</th><th>Harga/kg</th>
+    <th>Durasi (Jam)</th><th>Label</th><th>Tipe</th><th>Status</th><th>Aksi</th>
+  </tr>
+</thead>
+...
+
         <tbody>
           <?php foreach ($layananList as $l): ?>
           <tr>
@@ -117,6 +119,7 @@ require_once '../includes/admin_header.php';
             <td><?= rupiah($l['harga_per_kg']) ?></td>
             <td><?= $l['durasi_jam'] ?> jam</td>
             <td><?= htmlspecialchars($l['label_durasi']) ?></td>
+            <td><?= $l['tipe_hitungan'] === 'satuan' ? '🔢 Satuan' : '⚖️ Kilo' ?></td>
             <td>
               <a href="?toggle=<?= $l['id'] ?>">
                 <span class="badge <?= $l['aktif'] ? 'selesai' : 'pending' ?>">
@@ -129,6 +132,8 @@ require_once '../includes/admin_header.php';
               <a href="?hapus=<?= $l['id'] ?>" class="btn btn-danger btn-sm"
                  onclick="return confirm('Hapus layanan ini?')">🗑️</a>
             </td>
+
+
           </tr>
           <?php endforeach; ?>
         </tbody>
