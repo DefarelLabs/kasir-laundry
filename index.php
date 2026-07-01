@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="form-group">
-          <label for="berat">Berat Cucian (kg) <span class="req">*</span></label>
+          <label for="berat" id="beratLabel">Berat Cucian (kg) <span class="req">*</span></label>
           <input type="number" id="berat" name="berat" placeholder="cth: 3.5"
                  min="0.1" step="0.1" value="<?= htmlspecialchars($_POST['berat'] ?? '') ?>"/>
         </div>
@@ -218,9 +218,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     data-price="<?= $l['harga_per_kg'] ?>"
                     data-hours="<?= $l['durasi_jam'] ?>"
                     data-label="<?= htmlspecialchars($l['label_durasi']) ?>"
+                    data-tipe="<?= $l['tipe_hitungan'] ?>"
                     <?= (int)($_POST['layanan_id'] ?? 0) === $l['id'] ? 'selected' : '' ?>>
               <?= htmlspecialchars($l['nama']) ?> — <?= rupiah($l['harga_per_kg']) ?>/kg (<?= htmlspecialchars($l['label_durasi']) ?>)
             </option>
+            
             <?php endforeach; ?>
           </select>
         </div>
@@ -306,6 +308,7 @@ const layananData = <?php
     $jsData[$l['id']] = [
       'harga' => (int)$l['harga_per_kg'],
       'label' => $l['label_durasi'],
+      'tipe'  => $l['tipe_hitungan'],
     ];
   }
   echo json_encode($jsData);
@@ -318,23 +321,46 @@ function fRp(n) {
 
 // ── Real-time hitung harga ─────────────────────────────────────
 function updateHarga() {
-  const berat = parseFloat(document.getElementById('berat').value);
+  const beratInput = document.getElementById('berat');
+  const berat = parseFloat(beratInput.value);
   const lid   = document.getElementById('layanan_id').value;
   const totEl = document.getElementById('totalText');
   const brkEl = document.getElementById('breakText');
   const bdg   = document.getElementById('badgeDur');
   const bdgV  = document.getElementById('badgeVal');
+  const lblEl = document.getElementById('beratLabel');
 
-  if (!lid || !berat || berat <= 0) {
+  if (!lid) {
     totEl.textContent = 'Rp 0';
     brkEl.textContent = 'Isi form untuk menghitung';
     bdg.style.display = 'none';
     return;
   }
-  const d     = layananData[lid];
-  const total = berat * d.harga;
+
+  const d = layananData[lid];
+
+  // Sesuaikan tipe input sesuai layanan yang dipilih
+  if (d.tipe === 'satuan') {
+    beratInput.step = '1';
+    beratInput.min  = '1';
+    lblEl.innerHTML = 'Jumlah (pcs) <span class="req">*</span>';
+  } else {
+    beratInput.step = '0.1';
+    beratInput.min  = '0.1';
+    lblEl.innerHTML = 'Berat Cucian (kg) <span class="req">*</span>';
+  }
+
+  if (!berat || berat <= 0) {
+    totEl.textContent = 'Rp 0';
+    brkEl.textContent = 'Isi form untuk menghitung';
+    bdg.style.display = 'none';
+    return;
+  }
+
+  const total       = berat * d.harga;
+  const satuanLabel = d.tipe === 'satuan' ? 'pcs' : 'kg';
   totEl.textContent = fRp(total);
-  brkEl.textContent = `${berat} kg × ${fRp(d.harga)} / kg`;
+  brkEl.textContent = `${berat} ${satuanLabel} × ${fRp(d.harga)} / ${satuanLabel}`;
   bdg.style.display = 'block';
   bdgV.textContent  = d.label;
 }
