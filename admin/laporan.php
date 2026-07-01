@@ -269,13 +269,22 @@ require_once '../includes/admin_header.php';
     <div class="keuangan-cell">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💰 Pendapatan Kotor</div>
       <div style="font-size:19px;font-weight:800;color:var(--teal)"><?= rupiah($totalPendapatan) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $ringkas['jml_order'] ?> transaksi · <?= number_format($ringkas['total_berat'],1) ?> kg</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $ringkas['jml_order'] ?> transaksi (semua status) · <?= number_format($ringkas['total_berat'],1) ?> kg</div>
     </div>
     <div class="keuangan-cell">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💸 Total Pengeluaran</div>
       <div style="font-size:19px;font-weight:800;color:var(--red)"><?= rupiah($totalPengeluaran) ?></div>
       <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $dataPengeluaran['jml_pengeluaran'] ?> item pengeluaran</div>
     </div>
+<div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
+  <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Pendapatan Bersih</div>
+  <div style="font-size:19px;font-weight:800;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
+    <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
+  </div>
+  <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
+    Dari <?= (int)$ringkas['sudah_diambil'] ?> transaksi Diambil (<?= rupiah($pendapatanDiambil) ?>) − Pengeluaran
+  </div>
+</div>
     <div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Laba Bersih</div>
       <div style="font-size:19px;font-weight:800;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
@@ -434,14 +443,15 @@ $exportPengeluaran = array_map(fn($p) => [
 -->
 <script>
 window.laporanData = <?= json_encode([
-    'periodeLabel'     => $periodeLabel,
-    'preset'           => $preset,
-    'tanggalCetak'     => date('Ymd'),
-    'totalPendapatan'  => (float)$ringkas['total_pendapatan'],
-    'totalPengeluaran' => (float)$dataPengeluaran['total_pengeluaran'],
-    'labaBersih'       => $labaBersih,
-    'transaksi'        => $exportTransaksi,
-    'pengeluaran'      => $exportPengeluaran,
+    'periodeLabel'      => $periodeLabel,
+    'preset'            => $preset,
+    'tanggalCetak'      => date('Ymd'),
+    'totalPendapatan'   => (float)$ringkas['total_pendapatan'],
+    'pendapatanDiambil' => $pendapatanDiambil,   // ▲ TAMBAHKAN
+    'totalPengeluaran'  => (float)$dataPengeluaran['total_pengeluaran'],
+    'labaBersih'        => $labaBersih,
+    'transaksi'         => $exportTransaksi,
+    'pengeluaran'       => $exportPengeluaran,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
 </script>
 
