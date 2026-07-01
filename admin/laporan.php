@@ -64,7 +64,8 @@ $stmtRingkas = $db->prepare("
         COUNT(*)                       AS jml_order,
         COALESCE(SUM(total_harga), 0)  AS total_pendapatan,
         COALESCE(SUM(berat_kg), 0)     AS total_berat,
-        SUM(status='diambil')          AS sudah_diambil
+        SUM(status='diambil')          AS sudah_diambil,
+        COALESCE(SUM(CASE WHEN status='diambil' THEN total_harga ELSE 0 END), 0) AS pendapatan_diambil
     FROM transaksi
     WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
 ");
@@ -79,9 +80,10 @@ $stmtPengeluaran = $db->prepare("
 $stmtPengeluaran->execute([$tglMulai, $tglAkhir]);
 $dataPengeluaran = $stmtPengeluaran->fetch();
 
-$totalPendapatan  = (float)$ringkas['total_pendapatan'];
-$totalPengeluaran = (float)$dataPengeluaran['total_pengeluaran'];
-$labaBersih       = $totalPendapatan - $totalPengeluaran;
+$totalPendapatan   = (float)$ringkas['total_pendapatan'];    // Pendapatan Kotor: SEMUA status (pending+selesai+diambil)
+$pendapatanDiambil = (float)$ringkas['pendapatan_diambil'];  // Hanya status 'diambil' (dianggap lunas)
+$totalPengeluaran  = (float)$dataPengeluaran['total_pengeluaran'];
+$labaBersih        = $pendapatanDiambil - $totalPengeluaran; // Laba Bersih = Pendapatan Diambil - Pengeluaran
 
 // ── QUERY: Rekap per hari ─────────────────────────────────────
 $stmtHarian = $db->prepare("
