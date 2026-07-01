@@ -125,6 +125,32 @@ require_once '../includes/admin_header.php';
   /* Select status lebih compact */
   .transaksi-table-wrap select{min-width:100px}
 }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 42, 74, .55);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-box {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 420px;
+  padding: 22px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.modal-head h3 { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+.modal-close { background:none; border:none; font-size:16px; cursor:pointer; color:var(--gray-400); }
+.modal-close:hover { color: var(--gray-800); }
 </style>
 
 <!-- Filter Bar -->
@@ -238,5 +264,79 @@ require_once '../includes/admin_header.php';
   </div>
   <?php endif; ?>
 </div>
+
+<!-- ══ MODAL EDIT TRANSAKSI ══ -->
+<div id="modalEditTransaksi" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>✏️ Edit Transaksi</h3>
+      <button type="button" onclick="closeEditModal()" class="modal-close">✕</button>
+    </div>
+    <form method="POST">
+      <input type="hidden" name="aksi" value="edit_transaksi"/>
+      <input type="hidden" name="id" id="edit_id"/>
+
+      <div class="form-group">
+        <label class="lbl">Nama Pelanggan</label>
+        <input type="text" name="nama_pelanggan" id="edit_nama"/>
+      </div>
+
+      <div class="form-group">
+        <label class="lbl">Layanan</label>
+        <select name="layanan_id" id="edit_layanan_id" onchange="syncQtyInputType()">
+          <?php foreach ($db->query("SELECT * FROM layanan ORDER BY id")->fetchAll() as $l): ?>
+            <option value="<?= $l['id'] ?>" data-tipe="<?= $l['tipe_hitungan'] ?>">
+              <?= htmlspecialchars($l['nama']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="lbl" id="edit_qty_label">Berat/Jumlah</label>
+        <input type="number" name="berat_kg" id="edit_qty" min="0.1" step="0.1"/>
+      </div>
+
+      <div class="form-group">
+        <label class="lbl">Catatan</label>
+        <textarea name="catatan" id="edit_catatan" rows="2"></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-primary" style="flex:1">💾 Simpan Perubahan</button>
+        <button type="button" class="btn btn-outline" onclick="closeEditModal()">Batal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditModal(id, nama, layananId, qty, catatan) {
+  document.getElementById('edit_id').value = id;
+  document.getElementById('edit_nama').value = nama;
+  document.getElementById('edit_layanan_id').value = layananId;
+  document.getElementById('edit_qty').value = qty;
+  document.getElementById('edit_catatan').value = catatan;
+  syncQtyInputType();
+  document.getElementById('modalEditTransaksi').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('modalEditTransaksi').style.display = 'none';
+}
+function syncQtyInputType() {
+  var sel  = document.getElementById('edit_layanan_id');
+  var opt  = sel.options[sel.selectedIndex];
+  var tipe = opt ? opt.dataset.tipe : 'kilo';
+  var qty  = document.getElementById('edit_qty');
+  var lbl  = document.getElementById('edit_qty_label');
+  if (tipe === 'satuan') {
+    qty.step = '1'; qty.min = '1';
+    lbl.textContent = 'Jumlah (pcs)';
+  } else {
+    qty.step = '0.1'; qty.min = '0.1';
+    lbl.textContent = 'Berat (kg)';
+  }
+}
+</script>
 
 <?php require_once '../includes/admin_footer.php'; ?>
