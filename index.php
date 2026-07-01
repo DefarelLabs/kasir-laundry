@@ -412,8 +412,11 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <div class="r-row"><span class="r-key">Pelanggan</span><span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span></div>
       <div class="r-row"><span class="r-key">Layanan</span><span class="r-val"><?= htmlspecialchars($d['nama_layanan']) ?></span></div>
       <div class="r-row"><span class="r-key">Durasi</span><span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span></div>
-      <div class="r-row"><span class="r-key">Berat</span><span class="r-val"><?= $d['berat_kg'] ?> kg</span></div>
-      <div class="r-row"><span class="r-key">Harga/kg</span><span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span></div>
+      <!-- tipe hitungan kg/pcs -->
+      <?php $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg'; ?>
+      <div class="r-row"><span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span><span class="r-val"><?= $d['berat_kg'] ?> <?= $unit ?></span></div>
+      <div class="r-row"><span class="r-key">Harga/<?= $unit ?></span><span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span></div>
+      <!-- batas tipe hitungan -->
       <hr class="r-div"/>
       <div class="r-total"><span>TOTAL</span><span><?= rupiah($d['total_harga']) ?></span></div>
       <hr class="r-div"/>
