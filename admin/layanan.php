@@ -14,23 +14,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $durasi_jam    = (int)($_POST['durasi_jam'] ?? 0);
     $label_durasi  = trim($_POST['label_durasi'] ?? '');
     $aktif         = isset($_POST['aktif']) ? 1 : 0;
+    $tipe_hitungan = in_array($_POST['tipe_hitungan'] ?? '', ['kilo','satuan']) ? $_POST['tipe_hitungan'] : 'kilo';
 
     if (!$nama || !$kode || $harga <= 0 || $durasi_jam <= 0 || !$label_durasi) {
         setFlash('error', 'Semua field wajib diisi dengan benar.');
     } elseif ($aksi === 'tambah') {
-        try {
-            $stmt = $db->prepare("INSERT INTO layanan (kode,nama,harga_per_kg,durasi_jam,label_durasi,aktif) VALUES (?,?,?,?,?,?)");
-            $stmt->execute([$kode, $nama, $harga, $durasi_jam, $label_durasi, $aktif]);
-            setFlash('success', "Layanan \"$nama\" berhasil ditambahkan.");
-        } catch (PDOException $e) {
-            setFlash('error', 'Kode layanan sudah digunakan. Gunakan kode lain.');
-        }
-    } elseif ($aksi === 'edit') {
-        $id = (int)($_POST['id'] ?? 0);
-        $stmt = $db->prepare("UPDATE layanan SET kode=?,nama=?,harga_per_kg=?,durasi_jam=?,label_durasi=?,aktif=? WHERE id=?");
-        $stmt->execute([$kode, $nama, $harga, $durasi_jam, $label_durasi, $aktif, $id]);
-        setFlash('success', "Layanan \"$nama\" berhasil diperbarui.");
+    try {
+        $stmt = $db->prepare("INSERT INTO layanan (kode,nama,harga_per_kg,durasi_jam,label_durasi,tipe_hitungan,aktif) VALUES (?,?,?,?,?,?,?)");
+        $stmt->execute([$kode, $nama, $harga, $durasi_jam, $label_durasi, $tipe_hitungan, $aktif]);
+        setFlash('success', "Layanan \"$nama\" berhasil ditambahkan.");
+    } catch (PDOException $e) {
+        setFlash('error', 'Kode layanan sudah digunakan. Gunakan kode lain.');
     }
+} elseif ($aksi === 'edit') {
+    $id = (int)($_POST['id'] ?? 0);
+    $stmt = $db->prepare("UPDATE layanan SET kode=?,nama=?,harga_per_kg=?,durasi_jam=?,label_durasi=?,tipe_hitungan=?,aktif=? WHERE id=?");
+    $stmt->execute([$kode, $nama, $harga, $durasi_jam, $label_durasi, $tipe_hitungan, $aktif, $id]);
+    setFlash('success', "Layanan \"$nama\" berhasil diperbarui.");
+}
     header('Location: layanan.php');
     exit;
 }
@@ -163,6 +164,15 @@ require_once '../includes/admin_header.php';
         <input type="number" name="harga_per_kg" placeholder="cth: 7000" min="1"
                value="<?= $editData['harga_per_kg'] ?? '' ?>"/>
       </div>
+
+      <div class="form-group">
+  <label class="lbl">Tipe Hitungan <span style="color:red">*</span></label>
+  <select name="tipe_hitungan">
+    <option value="kilo"   <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'kilo'   ? 'selected' : '' ?>>⚖️ Kilo (kg)</option>
+    <option value="satuan" <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'selected' : '' ?>>🔢 Satuan (pcs)</option>
+  </select>
+  <small style="color:var(--gray-400);font-size:12px">Kilo = berat desimal (cth: 3.5 kg). Satuan = jumlah bulat (cth: 5 pcs).</small>
+</div>
 
       <div class="grid-2">
         <div class="form-group">
