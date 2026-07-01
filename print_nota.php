@@ -293,15 +293,15 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
         <span class="r-key">Durasi</span>
         <span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span>
       </div>
+      <?php $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg'; ?>
       <div class="r-row">
-        <span class="r-key">Berat</span>
-        <span class="r-val"><?= number_format($d['berat_kg'], 2) ?> kg</span>
+        <span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span>
+        <span class="r-val"><?= $unit === 'pcs' ? (int)$d['berat_kg'] : number_format($d['berat_kg'], 2) ?> <?= $unit ?></span>
       </div>
       <div class="r-row">
-        <span class="r-key">Harga/kg</span>
+        <span class="r-key">Harga/<?= $unit ?></span>
         <span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span>
       </div>
-
       <?php if (!empty($d['catatan'])): ?>
       <div class="r-row" style="margin-top:4px">
         <span class="r-key">Catatan</span>
