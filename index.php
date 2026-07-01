@@ -28,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$layanan) {
             $errMsg = 'Layanan tidak valid.';
+        } elseif ($layanan['tipe_hitungan'] === 'satuan' && $berat != (int)$berat) {
+          $errMsg = 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat (cth: 5, bukan 5.5).';
         } else {
             $total          = $berat * $layanan['harga_per_kg'];
             $tglMasuk       = new DateTime();
@@ -65,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'total_harga'     => $total,
                 'tanggal_masuk'   => $tglMasuk->format('Y-m-d H:i:s'),
                 'tanggal_selesai' => $tglSelesai->format('Y-m-d H:i:s'),
+                'tipe_hitungan'   => $layanan['tipe_hitungan'],
             ];
         }
     }
