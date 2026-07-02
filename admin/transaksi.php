@@ -7,7 +7,6 @@ $db = getDB();
 
 $db = getDB();
 
-// ▼▼ TAMBAHKAN BLOK INI ▼▼
 // ── HANDLE POST: edit transaksi ───────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_transaksi') {
     $id        = (int)($_POST['id'] ?? 0);
@@ -54,7 +53,6 @@ if (isset($_GET['hapus'])) {
     header('Location: transaksi.php');
     exit;
 }
-// ▲▲ AKHIR BLOK TAMBAHAN ▲▲
 
 if (isset($_GET['update_status'])) {
     $id     = (int)$_GET['update_status'];
@@ -199,6 +197,10 @@ require_once '../includes/admin_header.php';
   <div class="stat-card">
     <div class="stat-icon orange">⚖️</div>
     <div><div class="stat-label">Total Berat</div><div class="stat-value"><?= number_format($totals['berat'],1) ?> kg</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange">⚖️</div>
+    <div><div class="stat-label">Total Satuan</div><div class="stat-value"><?= number_format($totals['berat'],1) ?> pcs</div></div>
   </div>
 </div>
 
