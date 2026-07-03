@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 02 Jul 2026 pada 16.59
--- Versi server: 10.4.32-MariaDB
--- Versi PHP: 8.2.12
+-- Generation Time: Jul 03, 2026 at 03:47 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -20,11 +20,13 @@ SET time_zone = "+00:00";
 --
 -- Database: `db_kasir_laundry`
 --
+CREATE DATABASE IF NOT EXISTS `db_kasir_laundry` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `db_kasir_laundry`;
 
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `admin`
+-- Table structure for table `admin`
 --
 
 CREATE TABLE `admin` (
@@ -36,16 +38,16 @@ CREATE TABLE `admin` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data untuk tabel `admin`
+-- Dumping data for table `admin`
 --
 
 INSERT INTO `admin` (`id`, `username`, `password`, `nama`, `created_at`) VALUES
-(1, 'admin', '$2y$10$BWcsWpZDezVB0HtwIfJFc.WU1IDXeleBuMddir4R9utPCqjQTN/Cq', 'Administrator', '2026-07-01 20:29:07');
+(1, 'admin', '$2y$10$MHKsHMSlXwbh6z8cVmIN5OuTjZfTT7Z7Q8NxaDeZcUrEJJXcD7cCG', 'Administrator', '2026-07-01 10:09:52');
 
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `layanan`
+-- Table structure for table `layanan`
 --
 
 CREATE TABLE `layanan` (
@@ -62,19 +64,19 @@ CREATE TABLE `layanan` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data untuk tabel `layanan`
+-- Dumping data for table `layanan`
 --
 
 INSERT INTO `layanan` (`id`, `kode`, `nama`, `harga_per_kg`, `durasi_jam`, `tipe_hitungan`, `label_durasi`, `aktif`, `created_at`, `updated_at`) VALUES
-(1, 'reguler', 'Cuci Reguler', 7000, 72, 'kilo', '3 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
-(2, 'express', 'Cuci Express', 10000, 24, 'kilo', '1 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
-(3, 'kilat', 'Cuci Kilat', 12000, 6, 'kilo', '6 Jam', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
-(4, 'satuan', 'Cuci Satuan', 10000, 1, 'satuan', '1 Jam', 1, '2026-07-01 20:48:46', '2026-07-01 20:48:46');
+(1, 'reguler', 'Cuci Reguler', 7000, 72, 'kilo', '3 Hari', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
+(2, 'express', 'Cuci Express', 10000, 24, 'kilo', '1 Hari', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
+(3, 'kilat', 'Cuci Kilat', 12000, 6, 'kilo', '6 Jam', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
+(4, 'satuan', 'Cuci Satuan', 10000, 1, 'satuan', '1 Jam', 1, '2026-07-01 16:01:45', '2026-07-01 16:01:45');
 
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `pengeluaran`
+-- Table structure for table `pengeluaran`
 --
 
 CREATE TABLE `pengeluaran` (
@@ -88,16 +90,16 @@ CREATE TABLE `pengeluaran` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data untuk tabel `pengeluaran`
+-- Dumping data for table `pengeluaran`
 --
 
 INSERT INTO `pengeluaran` (`id`, `tanggal`, `keterangan`, `jumlah`, `catatan`, `created_at`, `updated_at`) VALUES
-(1, '2026-07-01', 'Listrik', 20000, NULL, '2026-07-01 22:05:46', '2026-07-01 22:05:46');
+(1, '2026-07-01', 'Listrik', 20000, NULL, '2026-07-01 17:19:05', '2026-07-01 17:19:05');
 
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `transaksi`
+-- Table structure for table `transaksi`
 --
 
 CREATE TABLE `transaksi` (
@@ -117,20 +119,18 @@ CREATE TABLE `transaksi` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data untuk tabel `transaksi`
+-- Dumping data for table `transaksi`
 --
 
 INSERT INTO `transaksi` (`id`, `no_nota`, `nama_pelanggan`, `layanan_id`, `berat_kg`, `tipe_hitungan`, `harga_per_kg`, `total_harga`, `tanggal_masuk`, `tanggal_selesai`, `status`, `catatan`, `created_at`) VALUES
-(1, 'PL-20260701-001', 'DEFAREL', 2, 1.00, 'kilo', 10000, 10000, '2026-07-01 20:47:57', '2026-07-02 20:47:57', 'diambil', NULL, '2026-07-01 20:47:57'),
-(2, 'PL-20260701-002', 'defarel', 4, 1.00, 'kilo', 10000, 10000, '2026-07-01 20:49:00', '2026-07-01 21:49:00', 'diambil', NULL, '2026-07-01 20:49:00'),
-(3, 'PL-20260701-003', 'defarel', 4, 1.00, 'kilo', 10000, 10000, '2026-07-01 20:50:56', '2026-07-01 21:50:56', 'diambil', NULL, '2026-07-01 20:50:56'),
-(4, 'PL-20260701-004', 'defarel', 3, 1.00, 'kilo', 12000, 12000, '2026-07-01 20:51:09', '2026-07-02 02:51:09', 'diambil', NULL, '2026-07-01 20:51:09');
+(1, 'PL-20260701-001', 'farel', 2, 3.90, 'kilo', 10000, 39000, '2026-07-01 10:18:49', '2026-07-02 10:18:49', 'diambil', NULL, '2026-07-01 10:18:49'),
+(2, 'PL-20260703-001', 'defarel', 3, 3.50, 'kilo', 12000, 42000, '2026-07-03 08:39:33', '2026-07-03 14:39:33', 'selesai', NULL, '2026-07-03 08:39:33');
 
 -- --------------------------------------------------------
 
 --
--- Stand-in struktur untuk tampilan `v_transaksi_lengkap`
--- (Lihat di bawah untuk tampilan aktual)
+-- Stand-in structure for view `v_transaksi_lengkap`
+-- (See below for the actual view)
 --
 CREATE TABLE `v_transaksi_lengkap` (
 `id` int(11)
@@ -153,7 +153,7 @@ CREATE TABLE `v_transaksi_lengkap` (
 -- --------------------------------------------------------
 
 --
--- Struktur untuk view `v_transaksi_lengkap`
+-- Structure for view `v_transaksi_lengkap`
 --
 DROP TABLE IF EXISTS `v_transaksi_lengkap`;
 
@@ -164,27 +164,27 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 
 --
--- Indeks untuk tabel `admin`
+-- Indexes for table `admin`
 --
 ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`);
 
 --
--- Indeks untuk tabel `layanan`
+-- Indexes for table `layanan`
 --
 ALTER TABLE `layanan`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `kode` (`kode`);
 
 --
--- Indeks untuk tabel `pengeluaran`
+-- Indexes for table `pengeluaran`
 --
 ALTER TABLE `pengeluaran`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indeks untuk tabel `transaksi`
+-- Indexes for table `transaksi`
 --
 ALTER TABLE `transaksi`
   ADD PRIMARY KEY (`id`),
@@ -192,39 +192,39 @@ ALTER TABLE `transaksi`
   ADD KEY `layanan_id` (`layanan_id`);
 
 --
--- AUTO_INCREMENT untuk tabel yang dibuang
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT untuk tabel `admin`
+-- AUTO_INCREMENT for table `admin`
 --
 ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT untuk tabel `layanan`
+-- AUTO_INCREMENT for table `layanan`
 --
 ALTER TABLE `layanan`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT untuk tabel `pengeluaran`
+-- AUTO_INCREMENT for table `pengeluaran`
 --
 ALTER TABLE `pengeluaran`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT untuk tabel `transaksi`
+-- AUTO_INCREMENT for table `transaksi`
 --
 ALTER TABLE `transaksi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
+-- Constraints for dumped tables
 --
 
 --
--- Ketidakleluasaan untuk tabel `transaksi`
+-- Constraints for table `transaksi`
 --
 ALTER TABLE `transaksi`
   ADD CONSTRAINT `transaksi_ibfk_1` FOREIGN KEY (`layanan_id`) REFERENCES `layanan` (`id`) ON UPDATE CASCADE;
