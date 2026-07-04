@@ -6,7 +6,17 @@ $db = getDB();
 $filterTgl = $_GET['tgl'] ?? date('Y-m-d');
 $filterTglFormatted = date('d/m/Y', strtotime($filterTgl));
 
-$stmtHari = $db->prepare("SELECT COUNT(*) AS jumlah_order, COALESCE(SUM(total_harga),0) AS total_pendapatan, COALESCE(SUM(berat_kg),0) AS total_berat, SUM(status='pending') AS pending, SUM(status='selesai') AS selesai, SUM(status='diambil') AS diambil FROM transaksi WHERE DATE(tanggal_masuk)=?");
+$stmtHari = $db->prepare("
+    SELECT
+        COUNT(*) AS jumlah_order,
+        COALESCE(SUM(total_harga),0) AS total_pendapatan,
+        COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS total_berat,
+        COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS total_satuan,
+        SUM(status='pending') AS pending,
+        SUM(status='selesai') AS selesai,
+        SUM(status='diambil') AS diambil
+    FROM transaksi WHERE DATE(tanggal_masuk)=?
+");
 $stmtHari->execute([$filterTgl]);
 $statHari = $stmtHari->fetch();
 
