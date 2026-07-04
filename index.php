@@ -217,13 +217,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <select id="layanan_id" name="layanan_id">
             <option value="" disabled selected>— Pilih Layanan —</option>
             <?php foreach ($layananList as $l): ?>
+            <?php $unitLbl = $l['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg'; ?>
             <option value="<?= $l['id'] ?>"
                     data-price="<?= $l['harga_per_kg'] ?>"
                     data-hours="<?= $l['durasi_jam'] ?>"
                     data-label="<?= htmlspecialchars($l['label_durasi']) ?>"
                     data-tipe="<?= $l['tipe_hitungan'] ?>"
                     <?= (int)($_POST['layanan_id'] ?? 0) === $l['id'] ? 'selected' : '' ?>>
-              <?= htmlspecialchars($l['nama']) ?> — <?= rupiah($l['harga_per_kg']) ?>/kg (<?= htmlspecialchars($l['label_durasi']) ?>)
+              <?= htmlspecialchars($l['nama']) ?> — <?= rupiah($l['harga_per_kg']) ?>/<?= $unitLbl ?> (<?= htmlspecialchars($l['label_durasi']) ?>)
             </option>
             
             <?php endforeach; ?>
