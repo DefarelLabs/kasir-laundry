@@ -88,7 +88,9 @@ $labaBersih        = $pendapatanDiambil - $totalPengeluaran; // Laba Bersih = Pe
 // ── QUERY: Rekap per hari ─────────────────────────────────────
 $stmtHarian = $db->prepare("
     SELECT DATE(tanggal_masuk) AS tgl, COUNT(*) AS jml_order,
-           SUM(berat_kg) AS total_berat, SUM(total_harga) AS total_pendapatan
+           COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS total_berat,
+           COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS total_satuan,
+           SUM(total_harga) AS total_pendapatan
     FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
     GROUP BY DATE(tanggal_masuk) ORDER BY tgl DESC
 ");
@@ -306,25 +308,27 @@ require_once '../includes/admin_header.php';
     <?php else: ?>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tanggal</th><th>Order</th><th>Berat</th><th>Pendapatan</th></tr></thead>
-        <tbody>
-          <?php foreach ($dataHarian as $h): ?>
-          <tr>
-            <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
-            <td><?= $h['jml_order'] ?></td>
-            <td><?= number_format($h['total_berat'],1) ?> kg</td>
-            <td><?= rupiah($h['total_pendapatan']) ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
-        <tfoot>
-          <tr style="background:var(--blue-light);font-weight:700">
-            <td>TOTAL</td>
-            <td><?= array_sum(array_column($dataHarian,'jml_order')) ?></td>
-            <td><?= number_format(array_sum(array_column($dataHarian,'total_berat')),1) ?> kg</td>
-            <td><?= rupiah(array_sum(array_column($dataHarian,'total_pendapatan'))) ?></td>
-          </tr>
-        </tfoot>
+        <thead><tr><th>Tanggal</th><th>Order</th><th>Berat</th><th>Satuan</th><th>Pendapatan</th></tr></thead>
+          <tbody>
+            <?php foreach ($dataHarian as $h): ?>
+            <tr>
+              <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
+              <td><?= $h['jml_order'] ?></td>
+              <td><?= number_format($h['total_berat'],1) ?> kg</td>
+              <td><?= number_format($h['total_satuan'],0) ?> pcs</td>
+              <td><?= rupiah($h['total_pendapatan']) ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--blue-light);font-weight:700">
+              <td>TOTAL</td>
+              <td><?= array_sum(array_column($dataHarian,'jml_order')) ?></td>
+              <td><?= number_format(array_sum(array_column($dataHarian,'total_berat')),1) ?> kg</td>
+              <td><?= number_format(array_sum(array_column($dataHarian,'total_satuan')),0) ?> pcs</td>
+              <td><?= rupiah(array_sum(array_column($dataHarian,'total_pendapatan'))) ?></td>
+            </tr>
+          </tfoot>
       </table>
     </div>
     <?php endif; ?>
