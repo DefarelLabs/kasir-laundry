@@ -105,7 +105,7 @@ require_once '../includes/admin_header.php';
       <table>
         <thead>
           <tr>
-            <th>Kode</th><th>Nama Layanan</th><th>Harga/kg</th>
+            <th>Kode</th><th>Nama Layanan</th><th>Harga</th>
             <th>Durasi (Jam)</th><th>Label</th><th>Tipe</th><th>Status</th><th>Aksi</th>
           </tr>
         </thead>
@@ -116,7 +116,7 @@ require_once '../includes/admin_header.php';
           <tr>
             <td><code style="font-size:12px;background:var(--gray-100);padding:2px 6px;border-radius:4px"><?= htmlspecialchars($l['kode']) ?></code></td>
             <td><strong><?= htmlspecialchars($l['nama']) ?></strong></td>
-            <td><?= rupiah($l['harga_per_kg']) ?></td>
+            <td><?= rupiah($l['harga_per_kg']) ?> <span style="color:var(--gray-400);font-size:11px">/ <?= $l['tipe_hitungan']==='satuan' ? 'pcs' : 'kg' ?></span></td>
             <td><?= $l['durasi_jam'] ?> jam</td>
             <td><?= htmlspecialchars($l['label_durasi']) ?></td>
             <td><?= $l['tipe_hitungan'] === 'satuan' ? '🔢 Satuan' : '⚖️ Kilo' ?></td>
@@ -165,7 +165,7 @@ require_once '../includes/admin_header.php';
       </div>
 
       <div class="form-group">
-        <label class="lbl">Harga per kg (Rp) <span style="color:red">*</span></label>
+        <label class="lbl">Harga per Satuan/kg (Rp) <span style="color:red">*</span></label>
         <input type="number" name="harga_per_kg" placeholder="cth: 7000" min="1"
                value="<?= $editData['harga_per_kg'] ?? '' ?>"/>
       </div>
