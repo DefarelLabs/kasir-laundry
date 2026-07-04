@@ -314,11 +314,8 @@ require_once '../includes/admin_header.php';
             <tr>
               <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
               <td><?= $h['jml_order'] ?></td>
-              <td>
-  <?= $l['tipe_hitungan'] === 'satuan'
-        ? number_format($l['total_'],0) . ' pcs'
-        : number_format($l['total_berat'],1) . ' kg' ?>
-</td>
+              <td><?= number_format($h['total_berat'],1) ?> kg</td>
+              <td><?= number_format($h['total_satuan'],0) ?> pcs</td>
               <td><?= rupiah($h['total_pendapatan']) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -354,7 +351,11 @@ require_once '../includes/admin_header.php';
               <br/><span style="font-size:11px;color:var(--gray-400)"><?= $l['label_durasi'] ?></span>
             </td>
             <td><?= $l['jml'] ?></td>
-            <td><?= number_format($l['total_berat'],1) ?> kg</td>
+            <td>
+  <?= $l['tipe_hitungan'] === 'satuan'
+        ? number_format($l['total_berat'],0) . ' pcs'
+        : number_format($l['total_berat'],1) . ' kg' ?>
+</td>
             <td><?= rupiah($l['total_harga']) ?></td>
           </tr>
           <?php endforeach; ?>

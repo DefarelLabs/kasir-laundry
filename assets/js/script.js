@@ -153,12 +153,12 @@ function exportCSV() {
     ['Dicetak: ' + new Date().toLocaleString('id-ID')],
     [],
     ['=== TRANSAKSI ==='],
-    ['No. Nota', 'Pelanggan', 'Layanan', 'Berat (kg)', 'Harga/kg', 'Total', 'Tgl Masuk', 'Status']
+    ['No. Nota', 'Pelanggan', 'Layanan', 'Jumlah', 'Satuan', 'Harga/Unit', 'Total', 'Tgl Masuk', 'Status']
   ];
 
   (d.transaksi || []).forEach(function (r) {
-    rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.berat_kg,
-               r.harga_per_kg, r.total_harga, r.tanggal_masuk, r.status]);
+    rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.jumlah, r.satuan,
+               r.harga_per_unit, r.total_harga, r.tanggal_masuk, r.status]);
   });
 
   rows.push([], ['=== PENGELUARAN ==='],
