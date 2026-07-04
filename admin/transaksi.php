@@ -93,10 +93,20 @@ $stmt->execute($params);
 $rows = $stmt->fetchAll();
 
 if ($filterMode === 'tanggal') {
-    $stmtTot = $db->prepare("SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total, COALESCE(SUM(berat_kg),0) AS berat FROM transaksi WHERE DATE(tanggal_masuk)=?");
+    $stmtTot = $db->prepare("
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
+               COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS berat,
+               COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS satuan
+        FROM transaksi WHERE DATE(tanggal_masuk)=?
+    ");
     $stmtTot->execute([$filterTgl]);
 } else {
-    $stmtTot = $db->prepare("SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total, COALESCE(SUM(berat_kg),0) AS berat FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?");
+    $stmtTot = $db->prepare("
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
+               COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS berat,
+               COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS satuan
+        FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?
+    ");
     $stmtTot->execute([$filterBulan]);
 }
 $totals = $stmtTot->fetch();
