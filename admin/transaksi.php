@@ -208,6 +208,10 @@ require_once '../includes/admin_header.php';
     <div class="stat-icon orange">⚖️</div>
     <div><div class="stat-label">Total Berat</div><div class="stat-value"><?= number_format($totals['berat'],1) ?> kg</div></div>
   </div>
+  <div class="stat-card">
+    <div class="stat-icon purple">🔢</div>
+    <div><div class="stat-label">Total Satuan</div><div class="stat-value"><?= number_format($totals['satuan'],0) ?> pcs</div></div>
+  </div>
 </div>
 
 <!-- Tabel -->
@@ -223,7 +227,7 @@ require_once '../includes/admin_header.php';
       <thead>
         <tr>
           <th>#</th><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th>
-          <th>Berat</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th>
+          <th>Berat/Pcs</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th>
           <th>Status</th><th>Aksi</th>
         </tr>
       </thead>
@@ -234,7 +238,7 @@ require_once '../includes/admin_header.php';
           <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
           <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
           <td style="font-size:13px"><?= htmlspecialchars($t['nama_layanan']) ?><br/><span style="color:var(--gray-400);font-size:11px"><?= $t['label_durasi'] ?></span></td>
-          <td><?= $t['berat_kg'] ?> kg</td>
+          <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_kg'] . ' pcs' : $t['berat_kg'] . ' kg' ?></td>
           <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_masuk']) ?></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_selesai']) ?></td>
