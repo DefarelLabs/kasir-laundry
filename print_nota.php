@@ -296,7 +296,7 @@ if (!$d) { die('Transaksi tidak ditemukan.'); }
       <?php $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg'; ?>
       <div class="r-row">
         <span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span>
-        <span class="r-val"><?= $unit === 'pcs' ? (int)$d['berat_kg'] : number_format($d['berat_kg'], 2) ?> <?= $unit ?></span>
+        <span class="r-val"><?= $unit === 'pcs' ? (int)$d['berat_pcs'] : number_format($d['berat_kg'], 2) ?> <?= $unit ?></span>
       </div>
       <div class="r-row">
         <span class="r-key">Harga/<?= $unit ?></span>
