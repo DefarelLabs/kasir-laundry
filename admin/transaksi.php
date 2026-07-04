@@ -22,25 +22,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_tr
         $stmtL->execute([$layananId]);
         $layanan = $stmtL->fetch();
 
+        if (!$id || !$nama || !$layananId || $qty <= 0) {
+        setFlash('error', 'Data edit transaksi tidak valid. Pastikan semua field terisi.');
+    } else {
+        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id = ?");
+        $stmtL->execute([$layananId]);
+        $layanan = $stmtL->fetch();
+
         if (!$layanan) {
             setFlash('error', 'Layanan tidak ditemukan.');
         } elseif ($layanan['tipe_hitungan'] === 'satuan' && $qty != (int)$qty) {
             setFlash('error', 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat.');
         } else {
+            $isSatuan  = $layanan['tipe_hitungan'] === 'satuan';
+            $beratKg   = $isSatuan ? 0 : $qty;
+            $beratPcs  = $isSatuan ? (int)$qty : 0;
             $totalBaru = $qty * $layanan['harga_per_kg'];
+
             $stmtU = $db->prepare("
                 UPDATE transaksi
-                SET nama_pelanggan = ?, layanan_id = ?, berat_kg = ?, harga_per_kg = ?,
+                SET nama_pelanggan = ?, layanan_id = ?, berat_kg = ?, berat_pcs = ?, harga_per_kg = ?,
                     total_harga = ?, tipe_hitungan = ?, catatan = ?
                 WHERE id = ?
             ");
             $stmtU->execute([
-                $nama, $layananId, $qty, $layanan['harga_per_kg'],
+                $nama, $layananId, $beratKg, $beratPcs, $layanan['harga_per_kg'],
                 $totalBaru, $layanan['tipe_hitungan'], $catatan ?: null, $id
             ]);
             setFlash('success', "Transaksi \"$nama\" berhasil diperbarui.");
         }
     }
+}
     header('Location: transaksi.php');
     exit;
 }
@@ -95,16 +107,16 @@ $rows = $stmt->fetchAll();
 if ($filterMode === 'tanggal') {
     $stmtTot = $db->prepare("
         SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
-               COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS berat,
-               COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS satuan
+               COALESCE(SUM(berat_kg),0) AS berat,
+               COALESCE(SUM(berat_pcs),0) AS satuan
         FROM transaksi WHERE DATE(tanggal_masuk)=?
     ");
     $stmtTot->execute([$filterTgl]);
 } else {
     $stmtTot = $db->prepare("
         SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
-               COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS berat,
-               COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS satuan
+               COALESCE(SUM(berat_kg),0) AS berat,
+               COALESCE(SUM(berat_pcs),0) AS satuan
         FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?
     ");
     $stmtTot->execute([$filterBulan]);
@@ -238,7 +250,7 @@ require_once '../includes/admin_header.php';
           <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
           <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
           <td style="font-size:13px"><?= htmlspecialchars($t['nama_layanan']) ?><br/><span style="color:var(--gray-400);font-size:11px"><?= $t['label_durasi'] ?></span></td>
-          <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_kg'] . ' pcs' : $t['berat_kg'] . ' kg' ?></td>
+          <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_pcs'] . ' pcs' : number_format($t['berat_kg'],2) . ' kg' ?></td>
           <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_masuk']) ?></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_selesai']) ?></td>
@@ -258,7 +270,8 @@ require_once '../includes/admin_header.php';
             <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm"
               title="Cetak 2">🖨️×2</a>
             <button type="button" class="btn btn-warning btn-sm" title="Edit"
-              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', <?= $t['layanan_id'] ?>, <?= $t['berat_kg'] ?>, '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
+              <?php $qtyEdit = $t['tipe_hitungan'] === 'satuan' ? $t['berat_pcs'] : $t['berat_kg']; ?>
+              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', <?= $t['layanan_id'] ?>, <?= $qtyEdit ?>, '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
             <a href="?hapus=<?= $t['id'] ?>" class="btn btn-danger btn-sm" title="Hapus"
               onclick="return confirm('Hapus transaksi <?= htmlspecialchars($t['no_nota'], ENT_QUOTES) ?> milik <?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>?\nData tidak bisa dikembalikan!')">🗑️</a>
           </td>
