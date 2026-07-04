@@ -99,11 +99,11 @@ $dataHarian = $stmtHarian->fetchAll();
 
 // ── QUERY: Rekap per layanan ──────────────────────────────────
 $stmtLayanan = $db->prepare("
-    SELECT l.nama, l.label_durasi, COUNT(t.id) AS jml,
+    SELECT l.nama, l.label_durasi, l.tipe_hitungan, COUNT(t.id) AS jml,
            SUM(t.berat_kg) AS total_berat, SUM(t.total_harga) AS total_harga
     FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
-    GROUP BY l.id, l.nama, l.label_durasi ORDER BY total_harga DESC
+    GROUP BY l.id, l.nama, l.label_durasi, l.tipe_hitungan ORDER BY total_harga DESC
 ");
 $stmtLayanan->execute([$tglMulai, $tglAkhir]);
 $dataLayanan = $stmtLayanan->fetchAll();
@@ -128,7 +128,7 @@ $topPelanggan = $stmtTop->fetchAll();
 // ── QUERY: Semua transaksi untuk export CSV ───────────────────
 $stmtExport = $db->prepare("
     SELECT t.no_nota, t.nama_pelanggan, l.nama AS layanan,
-           t.berat_kg, t.harga_per_kg, t.total_harga,
+           t.berat_kg, t.tipe_hitungan, t.harga_per_kg, t.total_harga,
            t.tanggal_masuk, t.status
     FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
@@ -314,8 +314,11 @@ require_once '../includes/admin_header.php';
             <tr>
               <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
               <td><?= $h['jml_order'] ?></td>
-              <td><?= number_format($h['total_berat'],1) ?> kg</td>
-              <td><?= number_format($h['total_satuan'],0) ?> pcs</td>
+              <td>
+  <?= $l['tipe_hitungan'] === 'satuan'
+        ? number_format($l['total_'],0) . ' pcs'
+        : number_format($l['total_berat'],1) . ' kg' ?>
+</td>
               <td><?= rupiah($h['total_pendapatan']) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -426,8 +429,9 @@ $exportTransaksi = array_map(fn($r) => [
     'no_nota'        => $r['no_nota'],
     'nama_pelanggan' => $r['nama_pelanggan'],
     'layanan'        => $r['layanan'],
-    'berat_kg'       => $r['berat_kg'],
-    'harga_per_kg'   => $r['harga_per_kg'],
+    'jumlah'         => $r['berat_kg'],
+    'satuan'         => $r['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg',  // ▲ TAMBAHAN
+    'harga_per_unit' => $r['harga_per_kg'],
     'total_harga'    => $r['total_harga'],
     'tanggal_masuk'  => date('d/m/Y H:i', strtotime($r['tanggal_masuk'])),
     'status'         => $r['status'],
