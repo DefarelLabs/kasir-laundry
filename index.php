@@ -29,45 +29,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$layanan) {
             $errMsg = 'Layanan tidak valid.';
         } elseif ($layanan['tipe_hitungan'] === 'satuan' && $berat != (int)$berat) {
-          $errMsg = 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat (cth: 5, bukan 5.5).';
+            $errMsg = 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat (cth: 5, bukan 5.5).';
         } else {
-            $total          = $berat * $layanan['harga_per_kg'];
-            $tglMasuk       = new DateTime();
-            $tglSelesai     = (clone $tglMasuk)->modify("+{$layanan['durasi_jam']} hours");
-            $noNota         = generateNoNota($db);
+            // ▼ Tentukan kolom mana yang diisi berdasarkan tipe layanan
+            $isSatuan = $layanan['tipe_hitungan'] === 'satuan';
+            $beratKg  = $isSatuan ? 0 : $berat;
+            $beratPcs = $isSatuan ? (int)$berat : 0;
+
+            $total = $berat * $layanan['harga_per_kg'];
+            $tglMasuk = new DateTime();
+            $tglSelesai = (clone $tglMasuk)->modify("+{$layanan['durasi_jam']} hours");
+            $noNota = generateNoNota($db);
 
             $stmtI = $db->prepare("
                 INSERT INTO transaksi
-                    (no_nota, nama_pelanggan, layanan_id, berat_kg, harga_per_kg, total_harga, tanggal_masuk, tanggal_selesai, catatan)
-                VALUES (?,?,?,?,?,?,?,?,?)
+                    (no_nota, nama_pelanggan, layanan_id, berat_kg, berat_pcs, harga_per_kg, total_harga, tanggal_masuk, tanggal_selesai, catatan, tipe_hitungan)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
             ");
             $stmtI->execute([
-                $noNota,
-                $nama,
-                $layananId,
-                $berat,
-                $layanan['harga_per_kg'],
-                $total,
-                $tglMasuk->format('Y-m-d H:i:s'),
-                $tglSelesai->format('Y-m-d H:i:s'),
-                $catatan ?: null,
+                $noNota, $nama, $layananId, $beratKg, $beratPcs, $layanan['harga_per_kg'], $total,
+                $tglMasuk->format('Y-m-d H:i:s'), $tglSelesai->format('Y-m-d H:i:s'),
+                $catatan ?: null, $layanan['tipe_hitungan'],
             ]);
 
             $newId = $db->lastInsertId();
 
-            // Data untuk ditampilkan di form & nota
             $notaData = [
-                'id'              => $newId,
-                'no_nota'         => $noNota,
-                'nama_pelanggan'  => $nama,
-                'nama_layanan'    => $layanan['nama'],
-                'label_durasi'    => $layanan['label_durasi'],
-                'berat_kg'        => $berat,
-                'harga_per_kg'    => $layanan['harga_per_kg'],
-                'total_harga'     => $total,
-                'tanggal_masuk'   => $tglMasuk->format('Y-m-d H:i:s'),
+                'id' => $newId, 'no_nota' => $noNota, 'nama_pelanggan' => $nama,
+                'nama_layanan' => $layanan['nama'], 'label_durasi' => $layanan['label_durasi'],
+                'berat_kg' => $beratKg, 'berat_pcs' => $beratPcs,      // ▲ dua-duanya disimpan
+                'harga_per_kg' => $layanan['harga_per_kg'],
+                'total_harga' => $total,
+                'tanggal_masuk' => $tglMasuk->format('Y-m-d H:i:s'),
                 'tanggal_selesai' => $tglSelesai->format('Y-m-d H:i:s'),
-                'tipe_hitungan'   => $layanan['tipe_hitungan'],
+                'tipe_hitungan' => $layanan['tipe_hitungan'],
             ];
         }
     }
@@ -414,8 +409,11 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <div class="r-row"><span class="r-key">Layanan</span><span class="r-val"><?= htmlspecialchars($d['nama_layanan']) ?></span></div>
       <div class="r-row"><span class="r-key">Durasi</span><span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span></div>
       <!-- tipe hitungan kg/pcs -->
-      <?php $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg'; ?>
-      <div class="r-row"><span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span><span class="r-val"><?= $d['berat_kg'] ?> <?= $unit ?></span></div>
+      <?php
+        $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg';
+        $qty  = $unit === 'pcs' ? $d['berat_pcs'] : $d['berat_kg'];
+      ?>
+      <div class="r-row"><span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span><span class="r-val"><?= $qty ?> <?= $unit ?></span></div>
       <div class="r-row"><span class="r-key">Harga/<?= $unit ?></span><span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span></div>
       <!-- batas tipe hitungan -->
       <hr class="r-div"/>
