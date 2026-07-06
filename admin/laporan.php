@@ -101,7 +101,8 @@ $dataHarian = $stmtHarian->fetchAll();
 // ── QUERY: Rekap per layanan ──────────────────────────────────
 $stmtLayanan = $db->prepare("
     SELECT l.nama, l.label_durasi, l.tipe_hitungan, COUNT(t.id) AS jml,
-           SUM(t.berat_kg) AS total_berat, SUM(t.total_harga) AS total_harga
+           SUM(t.berat_kg) AS total_berat, SUM(t.berat_pcs) AS total_satuan,
+           SUM(t.total_harga) AS total_harga
     FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
     GROUP BY l.id, l.nama, l.label_durasi, l.tipe_hitungan ORDER BY total_harga DESC
@@ -352,11 +353,9 @@ require_once '../includes/admin_header.php';
               <br/><span style="font-size:11px;color:var(--gray-400)"><?= $l['label_durasi'] ?></span>
             </td>
             <td><?= $l['jml'] ?></td>
-            <td>
-  <?= $l['tipe_hitungan'] === 'satuan'
-        ? number_format($l['total_berat'],0) . ' pcs'
-        : number_format($l['total_berat'],1) . ' kg' ?>
-</td>
+            <td><?= $l['tipe_hitungan'] === 'satuan'
+                ? number_format($l['total_berat'],0) . ' pcs'
+                : number_format($l['total_berat'],1) . ' kg' ?></td>
             <td><?= rupiah($l['total_harga']) ?></td>
           </tr>
           <?php endforeach; ?>
