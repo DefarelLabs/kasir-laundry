@@ -67,7 +67,7 @@
 ## 📁 Struktur Folder
 
 ```
-permana-laundry/
+kasir-laundry/
 │
 ├── index.php                   ← Halaman kasir (input transaksi baru, kilo/satuan)
 ├── print_nota.php              ← Halaman cetak nota thermal (1 / 2 lembar)
@@ -107,7 +107,7 @@ permana-laundry/
 
 ```bash
 # Salin folder proyek ke direktori htdocs XAMPP
-C:\xampp\htdocs\permana-laundry\
+C:\xampp\htdocs\kasir-laundry\
 ```
 
 ### Langkah 2 — Buat database
@@ -143,9 +143,9 @@ http://localhost/permana-laundry/setup.php
 
 | Halaman              | URL                                                   |
 |----------------------|-------------------------------------------------------|
-| Kasir (input order)  | `http://localhost/permana-laundry/`                   |
-| Login Admin          | `http://localhost/permana-laundry/admin/login.php`    |
-| Dashboard Admin      | `http://localhost/permana-laundry/admin/dashboard.php`|
+| Kasir (input order)  | `http://localhost/kasir-laundry/`                   |
+| Login Admin          | `http://localhost/kasir-laundry/admin/login.php`    |
+| Dashboard Admin      | `http://localhost/kasir-laundry/admin/dashboard.php`|
 
 ---
 
