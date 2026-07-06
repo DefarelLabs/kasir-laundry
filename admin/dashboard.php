@@ -85,7 +85,7 @@ require_once '../includes/admin_header.php';
             <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
             <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
             <td><?= htmlspecialchars($t['nama_layanan']) ?> <span style="color:var(--gray-400);font-size:11px">(<?= $t['label_durasi'] ?>)</span></td>
-            <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_kg'] . ' pcs' : number_format($t['berat_kg'],2) . ' kg' ?></td>
+            <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_pcs'] . ' pcs' : number_format($t['berat_kg'],2) . ' kg' ?></td>
             <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_masuk']) ?></td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_selesai']) ?></td>
