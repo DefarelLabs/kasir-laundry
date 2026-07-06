@@ -10,8 +10,8 @@ $stmtHari = $db->prepare("
     SELECT
         COUNT(*) AS jumlah_order,
         COALESCE(SUM(total_harga),0) AS total_pendapatan,
-        COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS total_berat,
-        COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS total_satuan,
+        COALESCE(SUM(berat_kg),0) AS total_berat,
+        COALESCE(SUM(berat_pcs),0) AS total_satuan,
         SUM(status='pending') AS pending,
         SUM(status='selesai') AS selesai,
         SUM(status='diambil') AS diambil
