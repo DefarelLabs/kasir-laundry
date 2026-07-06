@@ -61,10 +61,11 @@ $periodeLabel = match($preset) {
 // ── QUERY: Ringkasan transaksi ────────────────────────────────
 $stmtRingkas = $db->prepare("
     SELECT
-        COUNT(*)                       AS jml_order,
-        COALESCE(SUM(total_harga), 0)  AS total_pendapatan,
-        COALESCE(SUM(berat_kg), 0)     AS total_berat,
-        SUM(status='diambil')          AS sudah_diambil,
+        COUNT(*)                              AS jml_order,
+        COALESCE(SUM(total_harga), 0)         AS total_pendapatan,
+        COALESCE(SUM(berat_kg), 0)            AS total_berat,
+        COALESCE(SUM(berat_pcs), 0)           AS total_satuan,
+        SUM(status='diambil')                 AS sudah_diambil,
         COALESCE(SUM(CASE WHEN status='diambil' THEN total_harga ELSE 0 END), 0) AS pendapatan_diambil
     FROM transaksi
     WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
@@ -88,8 +89,8 @@ $labaBersih        = $pendapatanDiambil - $totalPengeluaran; // Laba Bersih = Pe
 // ── QUERY: Rekap per hari ─────────────────────────────────────
 $stmtHarian = $db->prepare("
     SELECT DATE(tanggal_masuk) AS tgl, COUNT(*) AS jml_order,
-           COALESCE(SUM(CASE WHEN tipe_hitungan='kilo'   THEN berat_kg ELSE 0 END),0) AS total_berat,
-           COALESCE(SUM(CASE WHEN tipe_hitungan='satuan' THEN berat_kg ELSE 0 END),0) AS total_satuan,
+           COALESCE(SUM(berat_kg),0)  AS total_berat,
+           COALESCE(SUM(berat_pcs),0) AS total_satuan,
            SUM(total_harga) AS total_pendapatan
     FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
     GROUP BY DATE(tanggal_masuk) ORDER BY tgl DESC
