@@ -130,7 +130,7 @@ $topPelanggan = $stmtTop->fetchAll();
 // ── QUERY: Semua transaksi untuk export CSV ───────────────────
 $stmtExport = $db->prepare("
     SELECT t.no_nota, t.nama_pelanggan, l.nama AS layanan,
-           t.berat_kg, t.tipe_hitungan, t.harga_per_kg, t.total_harga,
+           t.berat_kg, t.berat_pcs, t.tipe_hitungan, t.harga_per_kg, t.total_harga,
            t.tanggal_masuk, t.status
     FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
@@ -354,7 +354,7 @@ require_once '../includes/admin_header.php';
             </td>
             <td><?= $l['jml'] ?></td>
             <td><?= $l['tipe_hitungan'] === 'satuan'
-                ? number_format($l['total_berat'],0) . ' pcs'
+                ? number_format($l['total_satuan'],0) . ' pcs'
                 : number_format($l['total_berat'],1) . ' kg' ?></td>
             <td><?= rupiah($l['total_harga']) ?></td>
           </tr>
