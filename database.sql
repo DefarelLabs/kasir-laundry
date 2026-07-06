@@ -3,9 +3,9 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 03, 2026 at 03:47 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Waktu pembuatan: 06 Jul 2026 pada 16.18
+-- Versi server: 10.4.32-MariaDB
+-- Versi PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -26,7 +26,7 @@ USE `db_kasir_laundry`;
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admin`
+-- Struktur dari tabel `admin`
 --
 
 CREATE TABLE `admin` (
@@ -38,16 +38,16 @@ CREATE TABLE `admin` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `admin`
+-- Dumping data untuk tabel `admin`
 --
 
 INSERT INTO `admin` (`id`, `username`, `password`, `nama`, `created_at`) VALUES
-(1, 'admin', '$2y$10$MHKsHMSlXwbh6z8cVmIN5OuTjZfTT7Z7Q8NxaDeZcUrEJJXcD7cCG', 'Administrator', '2026-07-01 10:09:52');
+(1, 'admin', '$2y$10$BWcsWpZDezVB0HtwIfJFc.WU1IDXeleBuMddir4R9utPCqjQTN/Cq', 'Administrator', '2026-07-01 20:29:07');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `layanan`
+-- Struktur dari tabel `layanan`
 --
 
 CREATE TABLE `layanan` (
@@ -64,19 +64,19 @@ CREATE TABLE `layanan` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `layanan`
+-- Dumping data untuk tabel `layanan`
 --
 
 INSERT INTO `layanan` (`id`, `kode`, `nama`, `harga_per_kg`, `durasi_jam`, `tipe_hitungan`, `label_durasi`, `aktif`, `created_at`, `updated_at`) VALUES
-(1, 'reguler', 'Cuci Reguler', 7000, 72, 'kilo', '3 Hari', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
-(2, 'express', 'Cuci Express', 10000, 24, 'kilo', '1 Hari', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
-(3, 'kilat', 'Cuci Kilat', 12000, 6, 'kilo', '6 Jam', 1, '2026-07-01 10:09:52', '2026-07-01 10:09:52'),
-(4, 'satuan', 'Cuci Satuan', 10000, 1, 'satuan', '1 Jam', 1, '2026-07-01 16:01:45', '2026-07-01 16:01:45');
+(1, 'reguler', 'Cuci Reguler', 7000, 72, 'kilo', '3 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
+(2, 'express', 'Cuci Express', 10000, 24, 'kilo', '1 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
+(3, 'kilat', 'Cuci Kilat', 12000, 6, 'kilo', '6 Jam', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
+(4, 'satuan', 'Cuci Satuan', 10000, 1, 'satuan', '1 Jam', 1, '2026-07-01 20:48:46', '2026-07-01 20:48:46');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `pengeluaran`
+-- Struktur dari tabel `pengeluaran`
 --
 
 CREATE TABLE `pengeluaran` (
@@ -89,17 +89,10 @@ CREATE TABLE `pengeluaran` (
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `pengeluaran`
---
-
-INSERT INTO `pengeluaran` (`id`, `tanggal`, `keterangan`, `jumlah`, `catatan`, `created_at`, `updated_at`) VALUES
-(1, '2026-07-01', 'Listrik', 20000, NULL, '2026-07-01 17:19:05', '2026-07-01 17:19:05');
-
 -- --------------------------------------------------------
 
 --
--- Table structure for table `transaksi`
+-- Struktur dari tabel `transaksi`
 --
 
 CREATE TABLE `transaksi` (
@@ -108,6 +101,7 @@ CREATE TABLE `transaksi` (
   `nama_pelanggan` varchar(100) NOT NULL,
   `layanan_id` int(11) NOT NULL,
   `berat_kg` decimal(5,2) NOT NULL,
+  `berat_pcs` int(11) NOT NULL DEFAULT 0,
   `tipe_hitungan` enum('kilo','satuan') NOT NULL DEFAULT 'kilo',
   `harga_per_kg` decimal(10,0) NOT NULL,
   `total_harga` decimal(12,0) NOT NULL,
@@ -118,19 +112,11 @@ CREATE TABLE `transaksi` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `transaksi`
---
-
-INSERT INTO `transaksi` (`id`, `no_nota`, `nama_pelanggan`, `layanan_id`, `berat_kg`, `tipe_hitungan`, `harga_per_kg`, `total_harga`, `tanggal_masuk`, `tanggal_selesai`, `status`, `catatan`, `created_at`) VALUES
-(1, 'PL-20260701-001', 'farel', 2, 3.90, 'kilo', 10000, 39000, '2026-07-01 10:18:49', '2026-07-02 10:18:49', 'diambil', NULL, '2026-07-01 10:18:49'),
-(2, 'PL-20260703-001', 'defarel', 3, 3.50, 'kilo', 12000, 42000, '2026-07-03 08:39:33', '2026-07-03 14:39:33', 'selesai', NULL, '2026-07-03 08:39:33');
-
 -- --------------------------------------------------------
 
 --
--- Stand-in structure for view `v_transaksi_lengkap`
--- (See below for the actual view)
+-- Stand-in struktur untuk tampilan `v_transaksi_lengkap`
+-- (Lihat di bawah untuk tampilan aktual)
 --
 CREATE TABLE `v_transaksi_lengkap` (
 `id` int(11)
@@ -141,6 +127,7 @@ CREATE TABLE `v_transaksi_lengkap` (
 ,`label_durasi` varchar(30)
 ,`tipe_hitungan` enum('kilo','satuan')
 ,`berat_kg` decimal(5,2)
+,`berat_pcs` int(11)
 ,`harga_per_kg` decimal(10,0)
 ,`total_harga` decimal(12,0)
 ,`tanggal_masuk` datetime
@@ -153,38 +140,38 @@ CREATE TABLE `v_transaksi_lengkap` (
 -- --------------------------------------------------------
 
 --
--- Structure for view `v_transaksi_lengkap`
+-- Struktur untuk view `v_transaksi_lengkap`
 --
 DROP TABLE IF EXISTS `v_transaksi_lengkap`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_transaksi_lengkap`  AS SELECT `t`.`id` AS `id`, `t`.`no_nota` AS `no_nota`, `t`.`nama_pelanggan` AS `nama_pelanggan`, `t`.`layanan_id` AS `layanan_id`, `l`.`nama` AS `nama_layanan`, `l`.`label_durasi` AS `label_durasi`, `t`.`tipe_hitungan` AS `tipe_hitungan`, `t`.`berat_kg` AS `berat_kg`, `t`.`harga_per_kg` AS `harga_per_kg`, `t`.`total_harga` AS `total_harga`, `t`.`tanggal_masuk` AS `tanggal_masuk`, `t`.`tanggal_selesai` AS `tanggal_selesai`, `t`.`status` AS `status`, `t`.`catatan` AS `catatan`, `t`.`created_at` AS `created_at` FROM (`transaksi` `t` join `layanan` `l` on(`t`.`layanan_id` = `l`.`id`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_transaksi_lengkap`  AS SELECT `t`.`id` AS `id`, `t`.`no_nota` AS `no_nota`, `t`.`nama_pelanggan` AS `nama_pelanggan`, `t`.`layanan_id` AS `layanan_id`, `l`.`nama` AS `nama_layanan`, `l`.`label_durasi` AS `label_durasi`, `t`.`tipe_hitungan` AS `tipe_hitungan`, `t`.`berat_kg` AS `berat_kg`, `t`.`berat_pcs` AS `berat_pcs`, `t`.`harga_per_kg` AS `harga_per_kg`, `t`.`total_harga` AS `total_harga`, `t`.`tanggal_masuk` AS `tanggal_masuk`, `t`.`tanggal_selesai` AS `tanggal_selesai`, `t`.`status` AS `status`, `t`.`catatan` AS `catatan`, `t`.`created_at` AS `created_at` FROM (`transaksi` `t` join `layanan` `l` on(`t`.`layanan_id` = `l`.`id`)) ;
 
 --
 -- Indexes for dumped tables
 --
 
 --
--- Indexes for table `admin`
+-- Indeks untuk tabel `admin`
 --
 ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`);
 
 --
--- Indexes for table `layanan`
+-- Indeks untuk tabel `layanan`
 --
 ALTER TABLE `layanan`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `kode` (`kode`);
 
 --
--- Indexes for table `pengeluaran`
+-- Indeks untuk tabel `pengeluaran`
 --
 ALTER TABLE `pengeluaran`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `transaksi`
+-- Indeks untuk tabel `transaksi`
 --
 ALTER TABLE `transaksi`
   ADD PRIMARY KEY (`id`),
@@ -192,39 +179,39 @@ ALTER TABLE `transaksi`
   ADD KEY `layanan_id` (`layanan_id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- AUTO_INCREMENT untuk tabel yang dibuang
 --
 
 --
--- AUTO_INCREMENT for table `admin`
+-- AUTO_INCREMENT untuk tabel `admin`
 --
 ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `layanan`
+-- AUTO_INCREMENT untuk tabel `layanan`
 --
 ALTER TABLE `layanan`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `pengeluaran`
+-- AUTO_INCREMENT untuk tabel `pengeluaran`
 --
 ALTER TABLE `pengeluaran`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT for table `transaksi`
+-- AUTO_INCREMENT untuk tabel `transaksi`
 --
 ALTER TABLE `transaksi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- Constraints for dumped tables
+-- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
 --
 
 --
--- Constraints for table `transaksi`
+-- Ketidakleluasaan untuk tabel `transaksi`
 --
 ALTER TABLE `transaksi`
   ADD CONSTRAINT `transaksi_ibfk_1` FOREIGN KEY (`layanan_id`) REFERENCES `layanan` (`id`) ON UPDATE CASCADE;
