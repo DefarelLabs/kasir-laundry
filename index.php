@@ -147,6 +147,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       .panel-receipt{width:100%}
     }
 
+    .div-name {
+      display: flex;
+      justify-content: space-between;
+      flex-direction: column;
+      align-items: center;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .r-name {
+      font-weight: 600;
+      color: #444;
+    }
+    
+    .r-value {
+      font-weight: 900;
+      color: #111;
+      margin-top: 2px;
+      font-size: 20px;
+      font-
+    }
+
     /* ══════════════════════════════════════════
        @MEDIA PRINT
        Hanya #receipt-area yang tercetak.
@@ -424,6 +446,7 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
         <span class="r-name">Pelanggan</span>
         <span class="r-value"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
       </div>
+      <hr class="r-div"/>
       <div class="r-foot">Terima kasih! Tunjukkan nota ini saat pengambilan.<br/>— Permana Laundry —</div>
     </div>
 <?php } ?>
