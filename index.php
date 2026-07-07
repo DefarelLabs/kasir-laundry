@@ -419,6 +419,11 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <hr class="r-div"/>
       <div class="r-total"><span>TOTAL</span><span><?= rupiah($d['total_harga']) ?></span></div>
       <hr class="r-div"/>
+      <!-- Nama Pelanggan Bawah -->
+      <div class="div-name">
+        <span class="r-name">Pelanggan</span>
+        <span class="r-value"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
+      </div>
       <div class="r-foot">Terima kasih! Tunjukkan nota ini saat pengambilan.<br/>— Permana Laundry —</div>
     </div>
 <?php } ?>
