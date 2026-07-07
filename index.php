@@ -398,7 +398,7 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <div class="r-logo">
         <div class="r-shop">PERMANA LAUNDRY</div>
         <div class="r-tag">Bersih · Rapi · Tepat Waktu</div>
-        <div class="r-tag">☎ 0812-3456-7890</div>
+        <div class="r-tag">☎ 0896-9150-2028</div>
       </div>
       <hr class="r-div"/>
       <div class="r-row"><span class="r-key">No. Nota</span><span class="r-val"><?= htmlspecialchars($d['no_nota']) ?></span></div>
