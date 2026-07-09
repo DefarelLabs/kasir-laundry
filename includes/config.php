@@ -96,10 +96,10 @@ function isLoggedIn(): bool
  * Redirect ke login jika belum login.
  * Dipanggil di awal setiap halaman admin yang perlu proteksi.
  */
-function requireLogin(): void
+function requireLogin(string $redirectTo = 'login.php'): void
 {
     if (!isLoggedIn()) {
-        header('Location: login.php');
+        header('Location: ' . $redirectTo);
         exit;
     }
 }
