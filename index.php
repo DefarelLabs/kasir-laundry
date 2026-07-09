@@ -1,6 +1,7 @@
 <?php
 // index.php — Halaman kasir utama (input transaksi)
 require_once 'includes/config.php';
+requireLogin('admin/login.php');   // ← redirect ke admin/login.php jika belum login
 
 $db = getDB();
 
