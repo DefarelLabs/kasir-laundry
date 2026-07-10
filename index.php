@@ -1,70 +1,102 @@
 <?php
-// index.php — Halaman kasir utama (input transaksi)
 require_once 'includes/config.php';
-requireLogin('admin/login.php');   // ← redirect ke admin/login.php jika belum login
+requireLogin('admin/login.php');
 
 $db = getDB();
-
-// ── Ambil daftar layanan aktif dari DB ────────────────────────
 $layananList = $db->query("SELECT * FROM layanan WHERE aktif=1 ORDER BY id")->fetchAll();
 
-// ── HANDLE POST: simpan transaksi ─────────────────────────────
-$notaData  = null;  // Data nota yang baru dibuat
-$errMsg    = '';
+$notaData = null;
+$errMsg   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nama       = trim($_POST['nama'] ?? '');
-    $berat      = (float)($_POST['berat'] ?? 0);
-    $layananId  = (int)($_POST['layanan_id'] ?? 0);
-    $catatan    = trim($_POST['catatan'] ?? '');
+    $nama          = trim($_POST['nama'] ?? '');
+    $catatan       = trim($_POST['catatan'] ?? '');
+    $keranjangJson = $_POST['keranjang_json'] ?? '[]';
+    $keranjangRaw  = json_decode($keranjangJson, true);
+    $keranjangRaw  = is_array($keranjangRaw) ? $keranjangRaw : [];
 
-    // Validasi
-    if (!$nama || $berat <= 0 || !$layananId) {
-        $errMsg = 'Semua field wajib diisi dengan benar.';
+    if (!$nama || empty($keranjangRaw)) {
+        $errMsg = 'Nama pelanggan dan minimal 1 layanan di keranjang wajib diisi.';
     } else {
-        // Ambil data layanan
-        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id=? AND aktif=1");
-        $stmtL->execute([$layananId]);
-        $layanan = $stmtL->fetch();
+        // ▼ Jangan percaya harga dari client — ambil ulang tiap layanan dari DB
+        $items = [];
+        $totalHarga   = 0;
+        $maxDurasiJam = 0;
 
-        if (!$layanan) {
-            $errMsg = 'Layanan tidak valid.';
-        } elseif ($layanan['tipe_hitungan'] === 'satuan' && $berat != (int)$berat) {
-            $errMsg = 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat (cth: 5, bukan 5.5).';
-        } else {
-            // ▼ Tentukan kolom mana yang diisi berdasarkan tipe layanan
-            $isSatuan = $layanan['tipe_hitungan'] === 'satuan';
-            $beratKg  = $isSatuan ? 0 : $berat;
-            $beratPcs = $isSatuan ? (int)$berat : 0;
+        foreach ($keranjangRaw as $row) {
+            $lid    = (int)($row['layanan_id'] ?? 0);
+            $jumlah = (float)($row['jumlah'] ?? 0);
 
-            $total = $berat * $layanan['harga_per_kg'];
-            $tglMasuk = new DateTime();
-            $tglSelesai = (clone $tglMasuk)->modify("+{$layanan['durasi_jam']} hours");
-            $noNota = generateNoNota($db);
+            $stmtL = $db->prepare("SELECT * FROM layanan WHERE id=? AND aktif=1");
+            $stmtL->execute([$lid]);
+            $layanan = $stmtL->fetch();
 
-            $stmtI = $db->prepare("
-                INSERT INTO transaksi
-                    (no_nota, nama_pelanggan, layanan_id, berat_kg, berat_pcs, harga_per_kg, total_harga, tanggal_masuk, tanggal_selesai, catatan, tipe_hitungan)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
-            ");
-            $stmtI->execute([
-                $noNota, $nama, $layananId, $beratKg, $beratPcs, $layanan['harga_per_kg'], $total,
-                $tglMasuk->format('Y-m-d H:i:s'), $tglSelesai->format('Y-m-d H:i:s'),
-                $catatan ?: null, $layanan['tipe_hitungan'],
-            ]);
+            if (!$layanan || $jumlah <= 0) continue;
+            if ($layanan['tipe_hitungan'] === 'satuan' && $jumlah != (int)$jumlah) continue;
 
-            $newId = $db->lastInsertId();
+            $subtotal      = $jumlah * $layanan['harga_per_kg'];
+            $totalHarga   += $subtotal;
+            $maxDurasiJam  = max($maxDurasiJam, (int)$layanan['durasi_jam']);
 
-            $notaData = [
-                'id' => $newId, 'no_nota' => $noNota, 'nama_pelanggan' => $nama,
-                'nama_layanan' => $layanan['nama'], 'label_durasi' => $layanan['label_durasi'],
-                'berat_kg' => $beratKg, 'berat_pcs' => $beratPcs,      // ▲ dua-duanya disimpan
-                'harga_per_kg' => $layanan['harga_per_kg'],
-                'total_harga' => $total,
-                'tanggal_masuk' => $tglMasuk->format('Y-m-d H:i:s'),
-                'tanggal_selesai' => $tglSelesai->format('Y-m-d H:i:s'),
-                'tipe_hitungan' => $layanan['tipe_hitungan'],
+            $items[] = [
+                'layanan_id'     => $lid,
+                'nama_layanan'   => $layanan['nama'],
+                'label_durasi'   => $layanan['label_durasi'],
+                'tipe_hitungan'  => $layanan['tipe_hitungan'],
+                'jumlah'         => $jumlah,
+                'harga_per_unit' => $layanan['harga_per_kg'],
+                'subtotal'       => $subtotal,
             ];
+        }
+
+        if (empty($items)) {
+            $errMsg = 'Tidak ada layanan valid di keranjang.';
+        } else {
+            $tglMasuk   = new DateTime();
+            $tglSelesai = (clone $tglMasuk)->modify("+{$maxDurasiJam} hours");
+            $noNota     = generateNoNota($db);
+
+            try {
+                $db->beginTransaction();
+
+                $stmtH = $db->prepare("
+                    INSERT INTO transaksi (no_nota, nama_pelanggan, total_harga, tanggal_masuk, tanggal_selesai, catatan)
+                    VALUES (?,?,?,?,?,?)
+                ");
+                $stmtH->execute([
+                    $noNota, $nama, $totalHarga,
+                    $tglMasuk->format('Y-m-d H:i:s'), $tglSelesai->format('Y-m-d H:i:s'),
+                    $catatan ?: null,
+                ]);
+                $transaksiId = (int)$db->lastInsertId();
+
+                $stmtD = $db->prepare("
+                    INSERT INTO transaksi_detail
+                        (transaksi_id, layanan_id, nama_layanan, label_durasi, tipe_hitungan, jumlah, harga_per_unit, subtotal)
+                    VALUES (?,?,?,?,?,?,?,?)
+                ");
+                foreach ($items as $it) {
+                    $stmtD->execute([
+                        $transaksiId, $it['layanan_id'], $it['nama_layanan'], $it['label_durasi'],
+                        $it['tipe_hitungan'], $it['jumlah'], $it['harga_per_unit'], $it['subtotal'],
+                    ]);
+                }
+
+                $db->commit();
+
+                $notaData = [
+                    'id'              => $transaksiId,
+                    'no_nota'         => $noNota,
+                    'nama_pelanggan'  => $nama,
+                    'tanggal_masuk'   => $tglMasuk->format('Y-m-d H:i:s'),
+                    'tanggal_selesai' => $tglSelesai->format('Y-m-d H:i:s'),
+                    'total_harga'     => $totalHarga,
+                    'items'           => $items,
+                ];
+            } catch (Exception $e) {
+                $db->rollBack();
+                $errMsg = 'Gagal menyimpan transaksi. Coba lagi.';
+            }
         }
     }
 }
