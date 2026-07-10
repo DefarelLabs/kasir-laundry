@@ -6,10 +6,6 @@ requireLogin();
 $db = getDB();
 
 // ── Tentukan preset & range tanggal ───────────────────────────
-// Preset dikirim via GET['preset']. Untuk custom, user isi tgl_mulai & tgl_akhir.
-// Preset selain 'custom' SELALU menghitung ulang tanggalnya di PHP —
-// jadi tidak ada kemungkinan "tergeser" ke custom.
-
 $preset   = $_GET['preset'] ?? 'hari_ini';
 $today    = date('Y-m-d');
 
@@ -34,10 +30,8 @@ switch ($preset) {
         $tglAkhir = $today;
         break;
     case 'custom':
-        // Gunakan input user, fallback ke hari ini jika kosong
         $tglMulai = $_GET['tgl_mulai'] ?? $today;
         $tglAkhir = $_GET['tgl_akhir'] ?? $today;
-        // Pastikan format valid
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglMulai)) $tglMulai = $today;
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tglAkhir))  $tglAkhir = $today;
         if ($tglMulai > $tglAkhir) [$tglMulai, $tglAkhir] = [$tglAkhir, $tglMulai];
@@ -47,7 +41,6 @@ switch ($preset) {
         $tglMulai = $tglAkhir = $today;
 }
 
-// Label periode untuk tampilan
 $periodeLabel = match($preset) {
     'hari_ini' => 'Hari Ini — ' . tglIndoDate($tglMulai),
     '1_minggu' => '1 Minggu — ' . tglIndoDate($tglMulai) . ' s/d ' . tglIndoDate($tglAkhir),
@@ -58,13 +51,11 @@ $periodeLabel = match($preset) {
     default    => '',
 };
 
-// ── QUERY: Ringkasan transaksi ────────────────────────────────
+// ── QUERY: Ringkasan transaksi (dari header) ──────────────────
 $stmtRingkas = $db->prepare("
     SELECT
         COUNT(*)                              AS jml_order,
         COALESCE(SUM(total_harga), 0)         AS total_pendapatan,
-        COALESCE(SUM(berat_kg), 0)            AS total_berat,
-        COALESCE(SUM(berat_pcs), 0)           AS total_satuan,
         SUM(status='diambil')                 AS sudah_diambil,
         COALESCE(SUM(CASE WHEN status='diambil' THEN total_harga ELSE 0 END), 0) AS pendapatan_diambil
     FROM transaksi
@@ -73,7 +64,23 @@ $stmtRingkas = $db->prepare("
 $stmtRingkas->execute([$tglMulai, $tglAkhir]);
 $ringkas = $stmtRingkas->fetch();
 
-// ── QUERY: Pengeluaran periode ────────────────────────────────
+// ── QUERY: Total berat & satuan (dari transaksi_detail) ───────
+// Dipisah dari query header supaya SUM(total_harga) tidak
+// dobel-hitung akibat JOIN 1-ke-banyak dengan transaksi_detail.
+$stmtBeratRingkas = $db->prepare("
+    SELECT
+        COALESCE(SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END),0) AS total_berat,
+        COALESCE(SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END),0) AS total_satuan
+    FROM transaksi_detail d
+    JOIN transaksi t ON t.id = d.transaksi_id
+    WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
+");
+$stmtBeratRingkas->execute([$tglMulai, $tglAkhir]);
+$beratRingkas = $stmtBeratRingkas->fetch();
+$ringkas['total_berat']  = $beratRingkas['total_berat'];
+$ringkas['total_satuan'] = $beratRingkas['total_satuan'];
+
+// ── QUERY: Pengeluaran periode ─────────────────────────────────
 $stmtPengeluaran = $db->prepare("
     SELECT COALESCE(SUM(jumlah),0) AS total_pengeluaran, COUNT(*) AS jml_pengeluaran
     FROM pengeluaran WHERE tanggal BETWEEN ? AND ?
@@ -81,36 +88,58 @@ $stmtPengeluaran = $db->prepare("
 $stmtPengeluaran->execute([$tglMulai, $tglAkhir]);
 $dataPengeluaran = $stmtPengeluaran->fetch();
 
-$totalPendapatan   = (float)$ringkas['total_pendapatan'];    // Pendapatan Kotor: SEMUA status (pending+selesai+diambil)
-$pendapatanDiambil = (float)$ringkas['pendapatan_diambil'];  // Hanya status 'diambil' (dianggap lunas)
+$totalPendapatan   = (float)$ringkas['total_pendapatan'];
+$pendapatanDiambil = (float)$ringkas['pendapatan_diambil'];
 $totalPengeluaran  = (float)$dataPengeluaran['total_pengeluaran'];
-$labaBersih        = $pendapatanDiambil - $totalPengeluaran; // Laba Bersih = Pendapatan Diambil - Pengeluaran
+$labaBersih        = $pendapatanDiambil - $totalPengeluaran;
 
-// ── QUERY: Rekap per hari ─────────────────────────────────────
-$stmtHarian = $db->prepare("
-    SELECT DATE(tanggal_masuk) AS tgl, COUNT(*) AS jml_order,
-           COALESCE(SUM(berat_kg),0)  AS total_berat,
-           COALESCE(SUM(berat_pcs),0) AS total_satuan,
-           SUM(total_harga) AS total_pendapatan
+// ── QUERY: Rekap per hari (order & pendapatan dari header) ────
+$stmtHarianTx = $db->prepare("
+    SELECT DATE(tanggal_masuk) AS tgl, COUNT(*) AS jml_order, SUM(total_harga) AS total_pendapatan
     FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
     GROUP BY DATE(tanggal_masuk) ORDER BY tgl DESC
 ");
-$stmtHarian->execute([$tglMulai, $tglAkhir]);
-$dataHarian = $stmtHarian->fetchAll();
+$stmtHarianTx->execute([$tglMulai, $tglAkhir]);
+$dataHarian = $stmtHarianTx->fetchAll();
 
-// ── QUERY: Rekap per layanan ──────────────────────────────────
-$stmtLayanan = $db->prepare("
-    SELECT l.nama, l.label_durasi, l.tipe_hitungan, COUNT(t.id) AS jml,
-           SUM(t.berat_kg) AS total_berat, SUM(t.berat_pcs) AS total_satuan,
-           SUM(t.total_harga) AS total_harga
-    FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
+// ── QUERY: Berat/satuan per hari (dari detail, digabung manual) ─
+$stmtHarianDet = $db->prepare("
+    SELECT DATE(t.tanggal_masuk) AS tgl,
+           COALESCE(SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END),0) AS total_berat,
+           COALESCE(SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END),0) AS total_satuan
+    FROM transaksi_detail d
+    JOIN transaksi t ON t.id = d.transaksi_id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
-    GROUP BY l.id, l.nama, l.label_durasi, l.tipe_hitungan ORDER BY total_harga DESC
+    GROUP BY DATE(t.tanggal_masuk)
+");
+$stmtHarianDet->execute([$tglMulai, $tglAkhir]);
+$beratPerHari = [];
+foreach ($stmtHarianDet->fetchAll() as $r) {
+    $beratPerHari[$r['tgl']] = $r;
+}
+$dataHarian = array_map(function ($h) use ($beratPerHari) {
+    $b = $beratPerHari[$h['tgl']] ?? ['total_berat' => 0, 'total_satuan' => 0];
+    $h['total_berat']  = $b['total_berat'];
+    $h['total_satuan'] = $b['total_satuan'];
+    return $h;
+}, $dataHarian);
+
+// ── QUERY: Rekap per layanan (dari transaksi_detail) ───────────
+$stmtLayanan = $db->prepare("
+    SELECT d.nama_layanan AS nama, d.label_durasi, d.tipe_hitungan, COUNT(*) AS jml,
+           SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END) AS total_berat,
+           SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END) AS total_satuan,
+           SUM(d.subtotal) AS total_harga
+    FROM transaksi_detail d
+    JOIN transaksi t ON t.id = d.transaksi_id
+    WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
+    GROUP BY d.nama_layanan, d.label_durasi, d.tipe_hitungan
+    ORDER BY total_harga DESC
 ");
 $stmtLayanan->execute([$tglMulai, $tglAkhir]);
 $dataLayanan = $stmtLayanan->fetchAll();
 
-// ── QUERY: Detail pengeluaran ─────────────────────────────────
+// ── QUERY: Detail pengeluaran ───────────────────────────────────
 $stmtDetPengeluaran = $db->prepare("
     SELECT * FROM pengeluaran WHERE tanggal BETWEEN ? AND ?
     ORDER BY tanggal DESC, id DESC
@@ -118,7 +147,7 @@ $stmtDetPengeluaran = $db->prepare("
 $stmtDetPengeluaran->execute([$tglMulai, $tglAkhir]);
 $detailPengeluaran = $stmtDetPengeluaran->fetchAll();
 
-// ── QUERY: Top 5 pelanggan ────────────────────────────────────
+// ── QUERY: Top 5 pelanggan (dari header) ────────────────────────
 $stmtTop = $db->prepare("
     SELECT nama_pelanggan, COUNT(*) AS jml, SUM(total_harga) AS total
     FROM transaksi WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
@@ -127,14 +156,17 @@ $stmtTop = $db->prepare("
 $stmtTop->execute([$tglMulai, $tglAkhir]);
 $topPelanggan = $stmtTop->fetchAll();
 
-// ── QUERY: Semua transaksi untuk export CSV ───────────────────
+// ── QUERY: Semua ITEM (bukan header) untuk export CSV ───────────
+// 1 baris CSV = 1 layanan (bukan 1 nota), supaya subtotal per
+// layanan tetap akurat walau 1 nota berisi banyak layanan.
 $stmtExport = $db->prepare("
-    SELECT t.no_nota, t.nama_pelanggan, l.nama AS layanan,
-           t.berat_kg, t.berat_pcs, t.tipe_hitungan, t.harga_per_kg, t.total_harga,
+    SELECT t.no_nota, t.nama_pelanggan, d.nama_layanan AS layanan,
+           d.jumlah, d.tipe_hitungan, d.harga_per_unit, d.subtotal,
            t.tanggal_masuk, t.status
-    FROM transaksi t JOIN layanan l ON t.layanan_id = l.id
+    FROM transaksi_detail d
+    JOIN transaksi t ON t.id = d.transaksi_id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
-    ORDER BY t.tanggal_masuk DESC
+    ORDER BY t.tanggal_masuk DESC, d.id
 ");
 $stmtExport->execute([$tglMulai, $tglAkhir]);
 $dataExport = $stmtExport->fetchAll();
@@ -154,7 +186,6 @@ require_once '../includes/admin_header.php';
 .preset-btn:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-mid)}
 .preset-btn.active{background:var(--blue-mid);border-color:var(--blue-mid);color:#fff}
 .export-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-/* Filter card tidak overflow */
 .filter-card{overflow:visible!important;max-width:100%}
 #customRange form{flex-wrap:wrap}
 #customRange input[type=date]{width:100%;max-width:160px}
@@ -164,16 +195,12 @@ require_once '../includes/admin_header.php';
   .keuangan-cell+.keuangan-cell{border-left:none;border-top:1.5px solid var(--gray-200)}
   .preset-btn{font-size:11px;padding:6px 9px}
   .preset-btns{gap:5px}
-  /* Ringkasan keuangan font lebih kecil */
   .keuangan-cell{padding:12px 14px}
   .keuangan-cell div[style*="font-size:19px"]{font-size:15px!important}
-  /* Filter form wrap */
   #customRange form{gap:6px!important}
   #customRange input[type=date]{width:auto;flex:1;min-width:0}
-  /* Export buttons wrap */
   .export-btns{gap:6px}
   .export-btns .btn{font-size:11px!important;padding:6px 10px!important}
-  /* Periode label tidak overflow */
   .filter-card p{font-size:12px;word-break:break-word}
 }
 @media print{
@@ -188,7 +215,6 @@ require_once '../includes/admin_header.php';
 <!-- ── Filter Periode ── -->
 <div class="card filter-card" style="margin-bottom:20px">
 
-  <!-- Tombol preset — setiap tombol adalah link langsung, BUKAN submit form -->
   <div class="preset-btns">
     <a href="laporan.php?preset=hari_ini"  class="preset-btn <?= $preset==='hari_ini'?'active':'' ?>">📅 Hari Ini</a>
     <a href="laporan.php?preset=1_minggu"  class="preset-btn <?= $preset==='1_minggu'?'active':'' ?>">1️⃣ 1 Minggu</a>
@@ -199,7 +225,6 @@ require_once '../includes/admin_header.php';
        onclick="toggleCustom(event)">✏️ Custom</a>
   </div>
 
-  <!-- Form custom tanggal — hanya muncul saat preset=custom atau diklik -->
   <div id="customRange" style="<?= $preset==='custom'?'':'display:none' ?>;padding-top:4px">
     <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="hidden" name="preset" value="custom"/>
@@ -217,7 +242,6 @@ require_once '../includes/admin_header.php';
     📊 Menampilkan: <strong><?= $periodeLabel ?></strong>
   </p>
 
-  <!-- Tombol export -->
   <div class="export-btns">
     <button onclick="exportCSV()" class="btn btn-success" style="font-size:12px;padding:7px 14px">
       📥 Export CSV
@@ -350,7 +374,7 @@ require_once '../includes/admin_header.php';
           <tr>
             <td>
               <strong><?= htmlspecialchars($l['nama']) ?></strong>
-              <br/><span style="font-size:11px;color:var(--gray-400)"><?= $l['label_durasi'] ?></span>
+              <br/><span style="font-size:11px;color:var(--gray-400)"><?= htmlspecialchars($l['label_durasi']) ?></span>
             </td>
             <td><?= $l['jml'] ?></td>
             <td><?= $l['tipe_hitungan'] === 'satuan'
@@ -423,17 +447,16 @@ require_once '../includes/admin_header.php';
   <?php endif; ?>
 </div>
 
-<!-- Data export tersembunyi untuk JS CSV -->
-
 <?php
+// ── Data export (1 baris CSV = 1 layanan) ────────────────────
 $exportTransaksi = array_map(fn($r) => [
     'no_nota'        => $r['no_nota'],
     'nama_pelanggan' => $r['nama_pelanggan'],
     'layanan'        => $r['layanan'],
-    'jumlah'         => $r['tipe_hitungan'] === 'satuan' ? $r['berat_pcs'] : $r['berat_kg'],
+    'jumlah'         => $r['jumlah'],
     'satuan'         => $r['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg',
-    'harga_per_unit' => $r['harga_per_kg'],
-    'total_harga'    => $r['total_harga'],
+    'harga_per_unit' => $r['harga_per_unit'],
+    'total_harga'    => $r['subtotal'],
     'tanggal_masuk'  => date('d/m/Y H:i', strtotime($r['tanggal_masuk'])),
     'status'         => $r['status'],
 ], $dataExport);
@@ -446,17 +469,13 @@ $exportPengeluaran = array_map(fn($p) => [
 ], $detailPengeluaran);
 ?>
 
-<!--
-  Inject data PHP → JS melalui satu variabel global.
-  toggleCustom() dan exportCSV() sudah ada di assets/js/script.js.
--->
 <script>
 window.laporanData = <?= json_encode([
     'periodeLabel'      => $periodeLabel,
     'preset'            => $preset,
     'tanggalCetak'      => date('Ymd'),
     'totalPendapatan'   => (float)$ringkas['total_pendapatan'],
-    'pendapatanDiambil' => $pendapatanDiambil,   // ▲ TAMBAHKAN
+    'pendapatanDiambil' => $pendapatanDiambil,
     'totalPengeluaran'  => (float)$dataPengeluaran['total_pengeluaran'],
     'labaBersih'        => $labaBersih,
     'transaksi'         => $exportTransaksi,
