@@ -5,59 +5,29 @@ requireLogin();
 
 $db = getDB();
 
-$db = getDB();
-
-// ── HANDLE POST: edit transaksi ───────────────────────────────
+// ── HANDLE POST: edit transaksi (level header saja) ─────────────
+// Catatan: karena 1 transaksi sekarang bisa berisi BANYAK layanan,
+// edit di sini hanya untuk Nama Pelanggan & Catatan. Kalau ingin
+// mengubah daftar layanan/berat, hapus transaksi ini lalu buat ulang
+// dari halaman Kasir (index.php).
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_transaksi') {
-    $id        = (int)($_POST['id'] ?? 0);
-    $nama      = trim($_POST['nama_pelanggan'] ?? '');
-    $layananId = (int)($_POST['layanan_id'] ?? 0);
-    $qty       = (float)($_POST['berat_kg'] ?? 0);
-    $catatan   = trim($_POST['catatan'] ?? '');
+    $id      = (int)($_POST['id'] ?? 0);
+    $nama    = trim($_POST['nama_pelanggan'] ?? '');
+    $catatan = trim($_POST['catatan'] ?? '');
 
-    if (!$id || !$nama || !$layananId || $qty <= 0) {
-        setFlash('error', 'Data edit transaksi tidak valid. Pastikan semua field terisi.');
+    if (!$id || !$nama) {
+        setFlash('error', 'Nama pelanggan wajib diisi.');
     } else {
-        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id = ?");
-        $stmtL->execute([$layananId]);
-        $layanan = $stmtL->fetch();
-
-        if (!$id || !$nama || !$layananId || $qty <= 0) {
-        setFlash('error', 'Data edit transaksi tidak valid. Pastikan semua field terisi.');
-    } else {
-        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id = ?");
-        $stmtL->execute([$layananId]);
-        $layanan = $stmtL->fetch();
-
-        if (!$layanan) {
-            setFlash('error', 'Layanan tidak ditemukan.');
-        } elseif ($layanan['tipe_hitungan'] === 'satuan' && $qty != (int)$qty) {
-            setFlash('error', 'Untuk layanan bertipe Satuan, jumlah harus berupa angka bulat.');
-        } else {
-            $isSatuan  = $layanan['tipe_hitungan'] === 'satuan';
-            $beratKg   = $isSatuan ? 0 : $qty;
-            $beratPcs  = $isSatuan ? (int)$qty : 0;
-            $totalBaru = $qty * $layanan['harga_per_kg'];
-
-            $stmtU = $db->prepare("
-                UPDATE transaksi
-                SET nama_pelanggan = ?, layanan_id = ?, berat_kg = ?, berat_pcs = ?, harga_per_kg = ?,
-                    total_harga = ?, tipe_hitungan = ?, catatan = ?
-                WHERE id = ?
-            ");
-            $stmtU->execute([
-                $nama, $layananId, $beratKg, $beratPcs, $layanan['harga_per_kg'],
-                $totalBaru, $layanan['tipe_hitungan'], $catatan ?: null, $id
-            ]);
-            setFlash('success', "Transaksi \"$nama\" berhasil diperbarui.");
-        }
+        $db->prepare("UPDATE transaksi SET nama_pelanggan=?, catatan=? WHERE id=?")
+           ->execute([$nama, $catatan ?: null, $id]);
+        setFlash('success', "Transaksi \"$nama\" berhasil diperbarui.");
     }
-}
     header('Location: transaksi.php');
     exit;
 }
 
-// ── HANDLE: hapus transaksi ────────────────────────────────────
+// ── HANDLE: hapus transaksi ───────────────────────────────────────
+// transaksi_detail otomatis ikut terhapus (ON DELETE CASCADE)
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
     $db->prepare("DELETE FROM transaksi WHERE id = ?")->execute([$id]);
@@ -100,28 +70,61 @@ if ($search) {
 }
 
 $whereSQL = implode(' AND ', $where);
-$stmt = $db->prepare("SELECT * FROM v_transaksi_lengkap WHERE $whereSQL ORDER BY tanggal_masuk DESC");
+
+// ── Daftar transaksi (header) sesuai filter ───────────────────────
+$stmt = $db->prepare("SELECT * FROM transaksi WHERE $whereSQL ORDER BY tanggal_masuk DESC");
 $stmt->execute($params);
 $rows = $stmt->fetchAll();
 
+// ── Ambil semua detail layanan untuk baris-baris di atas sekaligus ──
+$detailByTransaksi = [];
+$idsFiltered = array_column($rows, 'id');
+if ($idsFiltered) {
+    $placeholders = implode(',', array_fill(0, count($idsFiltered), '?'));
+    $stmtDet = $db->prepare("SELECT * FROM transaksi_detail WHERE transaksi_id IN ($placeholders) ORDER BY id");
+    $stmtDet->execute($idsFiltered);
+    foreach ($stmtDet->fetchAll() as $row) {
+        $detailByTransaksi[$row['transaksi_id']][] = $row;
+    }
+}
+
+// ── Total ringkasan (order, pendapatan, berat, satuan) ────────────
 if ($filterMode === 'tanggal') {
     $stmtTot = $db->prepare("
-        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
-               COALESCE(SUM(berat_kg),0) AS berat,
-               COALESCE(SUM(berat_pcs),0) AS satuan
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total
         FROM transaksi WHERE DATE(tanggal_masuk)=?
     ");
     $stmtTot->execute([$filterTgl]);
+    $stmtTotBerat = $db->prepare("
+        SELECT
+            COALESCE(SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END),0) AS berat,
+            COALESCE(SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END),0) AS satuan
+        FROM transaksi_detail d
+        JOIN transaksi t ON t.id = d.transaksi_id
+        WHERE DATE(t.tanggal_masuk)=?
+    ");
+    $stmtTotBerat->execute([$filterTgl]);
 } else {
     $stmtTot = $db->prepare("
-        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
-               COALESCE(SUM(berat_kg),0) AS berat,
-               COALESCE(SUM(berat_pcs),0) AS satuan
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total
         FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?
     ");
     $stmtTot->execute([$filterBulan]);
+    $stmtTotBerat = $db->prepare("
+        SELECT
+            COALESCE(SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END),0) AS berat,
+            COALESCE(SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END),0) AS satuan
+        FROM transaksi_detail d
+        JOIN transaksi t ON t.id = d.transaksi_id
+        WHERE DATE_FORMAT(t.tanggal_masuk,'%Y-%m')=?
+    ");
+    $stmtTotBerat->execute([$filterBulan]);
 }
 $totals = $stmtTot->fetch();
+$totalsBerat = $stmtTotBerat->fetch();
+$totals['berat']  = $totalsBerat['berat'];
+$totals['satuan'] = $totalsBerat['satuan'];
+
 $periodeLabel = $filterMode === 'tanggal' ? tglIndoDate($filterTgl) : $filterBulan;
 
 $pageTitle = 'Data Transaksi';
@@ -133,7 +136,6 @@ require_once '../includes/admin_header.php';
   .filter-card-inner{flex-direction:column;gap:8px}
   .filter-card-inner input,.filter-card-inner select{width:100%!important;max-width:100%}
   .tab-btns{flex-wrap:nowrap;overflow-x:auto}
-  /* Tabel scroll horizontal */
   .transaksi-table-wrap{
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
@@ -142,9 +144,10 @@ require_once '../includes/admin_header.php';
   .transaksi-table-wrap table{
     min-width:750px;
   }
-  /* Select status lebih compact */
   .transaksi-table-wrap select{min-width:100px}
 }
+.item-line{margin-bottom:2px}
+.item-line:last-child{margin-bottom:0}
 
 /* ── Modal ── */
 .modal-overlay {
@@ -245,12 +248,21 @@ require_once '../includes/admin_header.php';
       </thead>
       <tbody>
         <?php foreach ($rows as $i => $t): ?>
+        <?php $items = $detailByTransaksi[$t['id']] ?? []; ?>
         <tr>
           <td style="color:var(--gray-400);font-size:12px"><?= $i+1 ?></td>
           <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
           <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
-          <td style="font-size:13px"><?= htmlspecialchars($t['nama_layanan']) ?><br/><span style="color:var(--gray-400);font-size:11px"><?= $t['label_durasi'] ?></span></td>
-          <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_pcs'] . ' pcs' : number_format($t['berat_kg'],2) . ' kg' ?></td>
+          <td style="font-size:13px">
+            <?php foreach ($items as $it): ?>
+              <div class="item-line"><?= htmlspecialchars($it['nama_layanan']) ?><br/><span style="color:var(--gray-400);font-size:11px"><?= htmlspecialchars($it['label_durasi']) ?></span></div>
+            <?php endforeach; ?>
+          </td>
+          <td>
+            <?php foreach ($items as $it): ?>
+              <div class="item-line"><?= $it['tipe_hitungan'] === 'satuan' ? (int)$it['jumlah'] . ' pcs' : number_format($it['jumlah'],2) . ' kg' ?></div>
+            <?php endforeach; ?>
+          </td>
           <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_masuk']) ?></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_selesai']) ?></td>
@@ -269,9 +281,8 @@ require_once '../includes/admin_header.php';
               title="Cetak 1">🖨️×1</a>
             <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm"
               title="Cetak 2">🖨️×2</a>
-            <button type="button" class="btn btn-warning btn-sm" title="Edit"
-              <?php $qtyEdit = $t['tipe_hitungan'] === 'satuan' ? $t['berat_pcs'] : $t['berat_kg']; ?>
-              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', <?= $t['layanan_id'] ?>, <?= $qtyEdit ?>, '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
+            <button type="button" class="btn btn-warning btn-sm" title="Edit Nama/Catatan"
+              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
             <a href="?hapus=<?= $t['id'] ?>" class="btn btn-danger btn-sm" title="Hapus"
               onclick="return confirm('Hapus transaksi <?= htmlspecialchars($t['no_nota'], ENT_QUOTES) ?> milik <?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>?\nData tidak bisa dikembalikan!')">🗑️</a>
           </td>
@@ -290,13 +301,16 @@ require_once '../includes/admin_header.php';
   <?php endif; ?>
 </div>
 
-<!-- ══ MODAL EDIT TRANSAKSI ══ -->
+<!-- ══ MODAL EDIT TRANSAKSI (Nama Pelanggan & Catatan saja) ══ -->
 <div id="modalEditTransaksi" class="modal-overlay" style="display:none">
   <div class="modal-box">
     <div class="modal-head">
       <h3>✏️ Edit Transaksi</h3>
       <button type="button" onclick="closeEditModal()" class="modal-close">✕</button>
     </div>
+    <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px">
+      Untuk mengubah daftar layanan/berat, hapus transaksi ini lalu buat ulang lewat halaman Kasir.
+    </p>
     <form method="POST">
       <input type="hidden" name="aksi" value="edit_transaksi"/>
       <input type="hidden" name="id" id="edit_id"/>
@@ -304,22 +318,6 @@ require_once '../includes/admin_header.php';
       <div class="form-group">
         <label class="lbl">Nama Pelanggan</label>
         <input type="text" name="nama_pelanggan" id="edit_nama"/>
-      </div>
-
-      <div class="form-group">
-        <label class="lbl">Layanan</label>
-        <select name="layanan_id" id="edit_layanan_id" onchange="syncQtyInputType()">
-          <?php foreach ($db->query("SELECT * FROM layanan ORDER BY id")->fetchAll() as $l): ?>
-            <option value="<?= $l['id'] ?>" data-tipe="<?= $l['tipe_hitungan'] ?>">
-              <?= htmlspecialchars($l['nama']) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label class="lbl" id="edit_qty_label">Berat/Jumlah</label>
-        <input type="number" name="berat_kg" id="edit_qty" min="0.1" step="0.1"/>
       </div>
 
       <div class="form-group">
@@ -336,31 +334,14 @@ require_once '../includes/admin_header.php';
 </div>
 
 <script>
-function openEditModal(id, nama, layananId, qty, catatan) {
+function openEditModal(id, nama, catatan) {
   document.getElementById('edit_id').value = id;
   document.getElementById('edit_nama').value = nama;
-  document.getElementById('edit_layanan_id').value = layananId;
-  document.getElementById('edit_qty').value = qty;
   document.getElementById('edit_catatan').value = catatan;
-  syncQtyInputType();
   document.getElementById('modalEditTransaksi').style.display = 'flex';
 }
 function closeEditModal() {
   document.getElementById('modalEditTransaksi').style.display = 'none';
-}
-function syncQtyInputType() {
-  var sel  = document.getElementById('edit_layanan_id');
-  var opt  = sel.options[sel.selectedIndex];
-  var tipe = opt ? opt.dataset.tipe : 'kilo';
-  var qty  = document.getElementById('edit_qty');
-  var lbl  = document.getElementById('edit_qty_label');
-  if (tipe === 'satuan') {
-    qty.step = '1'; qty.min = '1';
-    lbl.textContent = 'Jumlah (pcs)';
-  } else {
-    qty.step = '0.1'; qty.min = '0.1';
-    lbl.textContent = 'Berat (kg)';
-  }
 }
 </script>
 
