@@ -11,11 +11,15 @@ $copy = max(1, min(2, $copy)); // Batasi 1-2
 if (!$id) { die('ID tidak valid.'); }
 
 // Ambil data transaksi lengkap
-$stmt = $db->prepare("SELECT * FROM v_transaksi_lengkap WHERE id = ?");
-$stmt->execute([$id]);
-$d = $stmt->fetch();
+$stmtH = $db->prepare("SELECT * FROM transaksi WHERE id = ?");
+$stmtH->execute([$id]);
+$d = $stmtH->fetch();
 
 if (!$d) { die('Transaksi tidak ditemukan.'); }
+
+$stmtD = $db->prepare("SELECT * FROM transaksi_detail WHERE transaksi_id = ? ORDER BY id");
+$stmtD->execute([$id]);
+$items = $stmtD->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
