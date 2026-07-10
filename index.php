@@ -365,11 +365,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div id="printable-area" style="display:none"></div>
 
 <script>
-// ── Data layanan dari PHP (untuk real-time hitung di JS) ───────
 const layananData = <?php
   $jsData = [];
   foreach ($layananList as $l) {
     $jsData[$l['id']] = [
+      'nama'  => $l['nama'],
       'harga' => (int)$l['harga_per_kg'],
       'label' => $l['label_durasi'],
       'tipe'  => $l['tipe_hitungan'],
@@ -378,66 +378,111 @@ const layananData = <?php
   echo json_encode($jsData);
 ?>;
 
-// ── Format Rupiah (JS) ─────────────────────────────────────────
 function fRp(n) {
   return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
 }
 
-// ── Real-time hitung harga ─────────────────────────────────────
-function updateHarga() {
-  const beratInput = document.getElementById('berat');
-  const berat = parseFloat(beratInput.value);
-  const lid   = document.getElementById('layanan_id').value;
+let keranjang = [];
+
+// Sesuaikan step/label input jumlah sesuai tipe layanan terpilih
+document.getElementById('layanan_id').addEventListener('change', function () {
+  const d = layananData[this.value];
+  const jumlahInput = document.getElementById('jumlah');
+  const lbl = document.getElementById('jumlahLabel');
+  if (!d) return;
+  if (d.tipe === 'satuan') {
+    jumlahInput.step = '1'; jumlahInput.min = '1';
+    lbl.textContent = 'Jumlah (pcs)';
+  } else {
+    jumlahInput.step = '0.1'; jumlahInput.min = '0.1';
+    lbl.textContent = 'Berat (kg)';
+  }
+});
+
+function tambahKeKeranjang() {
+  const sel = document.getElementById('layanan_id');
+  const lid = sel.value;
+  const jumlahInput = document.getElementById('jumlah');
+  const jumlah = parseFloat(jumlahInput.value);
+
+  if (!lid) { alert('Pilih layanan terlebih dahulu.'); return; }
+  const d = layananData[lid];
+  if (!jumlah || jumlah <= 0) { alert('Isi berat/jumlah dengan benar.'); return; }
+  if (d.tipe === 'satuan' && jumlah !== Math.floor(jumlah)) {
+    alert('Untuk layanan Satuan, jumlah harus bulat (cth: 5, bukan 5.5).');
+    return;
+  }
+
+  keranjang.push({
+    layanan_id: lid,
+    nama: d.nama,
+    tipe: d.tipe,
+    jumlah: jumlah,
+    harga: d.harga,
+    subtotal: jumlah * d.harga,
+  });
+
+  jumlahInput.value = '';
+  renderKeranjang();
+}
+
+function hapusDariKeranjang(idx) {
+  keranjang.splice(idx, 1);
+  renderKeranjang();
+}
+
+function renderKeranjang() {
+  const wrap = document.getElementById('keranjangList');
+  const btnSubmit = document.getElementById('btnSubmit');
   const totEl = document.getElementById('totalText');
   const brkEl = document.getElementById('breakText');
-  const bdg   = document.getElementById('badgeDur');
-  const bdgV  = document.getElementById('badgeVal');
-  const lblEl = document.getElementById('beratLabel');
 
-  if (!lid) {
+  if (keranjang.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--gray-400);font-size:13px;text-align:center;padding:10px 0">Keranjang kosong</p>';
     totEl.textContent = 'Rp 0';
-    brkEl.textContent = 'Isi form untuk menghitung';
-    bdg.style.display = 'none';
+    brkEl.textContent = 'Tambahkan layanan ke keranjang';
+    btnSubmit.disabled = true;
+    document.getElementById('keranjangJsonInput').value = '[]';
     return;
   }
 
-  const d = layananData[lid];
+  let html = '';
+  let total = 0;
+  keranjang.forEach((it, idx) => {
+    total += it.subtotal;
+    const unit = it.tipe === 'satuan' ? 'pcs' : 'kg';
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--gray-100)">
+      <div>
+        <div style="font-weight:600;font-size:13px">${it.nama}</div>
+        <div style="font-size:12px;color:var(--gray-400)">${it.jumlah} ${unit} × ${fRp(it.harga)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <strong style="font-size:13px">${fRp(it.subtotal)}</strong>
+        <button type="button" onclick="hapusDariKeranjang(${idx})"
+                style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">🗑️</button>
+      </div>
+    </div>`;
+  });
 
-  // Sesuaikan tipe input sesuai layanan yang dipilih
-  if (d.tipe === 'satuan') {
-    beratInput.step = '1';
-    beratInput.min  = '1';
-    lblEl.innerHTML = 'Jumlah (pcs) <span class="req">*</span>';
-  } else {
-    beratInput.step = '0.1';
-    beratInput.min  = '0.1';
-    lblEl.innerHTML = 'Berat Cucian (kg) <span class="req">*</span>';
-  }
-
-  if (!berat || berat <= 0) {
-    totEl.textContent = 'Rp 0';
-    brkEl.textContent = 'Isi form untuk menghitung';
-    bdg.style.display = 'none';
-    return;
-  }
-
-  const total       = berat * d.harga;
-  const satuanLabel = d.tipe === 'satuan' ? 'pcs' : 'kg';
+  wrap.innerHTML = html;
   totEl.textContent = fRp(total);
-  brkEl.textContent = `${berat} ${satuanLabel} × ${fRp(d.harga)} / ${satuanLabel}`;
-  bdg.style.display = 'block';
-  bdgV.textContent  = d.label;
-}
-document.getElementById('berat').addEventListener('input', updateHarga);
-document.getElementById('layanan_id').addEventListener('change', updateHarga);
-updateHarga(); // Jalankan sekali saat load (kalau ada nilai dari POST)
+  brkEl.textContent = keranjang.length + ' layanan di keranjang';
+  btnSubmit.disabled = false;
 
-// ── Fungsi cetak nota ──────────────────────────────────────────
-// copy = 1: satu lembar (untuk pelanggan)
-// copy = 2: dua lembar (pelanggan + arsip/pemilik)
+  document.getElementById('keranjangJsonInput').value = JSON.stringify(
+    keranjang.map(it => ({ layanan_id: it.layanan_id, jumlah: it.jumlah }))
+  );
+}
+
+document.getElementById('kasirForm').addEventListener('submit', function (e) {
+  if (keranjang.length === 0) {
+    e.preventDefault();
+    alert('Tambahkan minimal 1 layanan ke keranjang sebelum menyimpan!');
+  }
+});
+
 function cetakNota(copy) {
   <?php if ($notaData): ?>
-    // Redirect ke halaman print_nota.php dengan parameter id dan jumlah copy
     window.open('print_nota.php?id=<?= $notaData['id'] ?>&copy=' + copy, '_blank');
   <?php else: ?>
     alert('Simpan transaksi terlebih dahulu!');
