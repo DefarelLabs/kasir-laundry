@@ -1,16 +1,10 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Waktu pembuatan: 06 Jul 2026 pada 16.18
--- Versi server: 10.4.32-MariaDB
--- Versi PHP: 8.2.12
+-- phpMyAdmin SQL Dump — Skema FINAL (Header & Detail / Multi-Layanan)
+-- Gunakan file ini HANYA untuk instalasi BARU dari nol.
+-- Jika database Anda sudah ada datanya, gunakan migration_multi_layanan.sql, BUKAN file ini.
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -28,7 +22,6 @@ USE `db_kasir_laundry`;
 --
 -- Struktur dari tabel `admin`
 --
-
 CREATE TABLE `admin` (
   `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -36,10 +29,6 @@ CREATE TABLE `admin` (
   `nama` varchar(100) NOT NULL,
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data untuk tabel `admin`
---
 
 INSERT INTO `admin` (`id`, `username`, `password`, `nama`, `created_at`) VALUES
 (1, 'admin', '$2y$10$BWcsWpZDezVB0HtwIfJFc.WU1IDXeleBuMddir4R9utPCqjQTN/Cq', 'Administrator', '2026-07-01 20:29:07');
@@ -49,7 +38,6 @@ INSERT INTO `admin` (`id`, `username`, `password`, `nama`, `created_at`) VALUES
 --
 -- Struktur dari tabel `layanan`
 --
-
 CREATE TABLE `layanan` (
   `id` int(11) NOT NULL,
   `kode` varchar(20) NOT NULL,
@@ -63,10 +51,6 @@ CREATE TABLE `layanan` (
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data untuk tabel `layanan`
---
-
 INSERT INTO `layanan` (`id`, `kode`, `nama`, `harga_per_kg`, `durasi_jam`, `tipe_hitungan`, `label_durasi`, `aktif`, `created_at`, `updated_at`) VALUES
 (1, 'reguler', 'Cuci Reguler', 7000, 72, 'kilo', '3 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
 (2, 'express', 'Cuci Express', 10000, 24, 'kilo', '1 Hari', 1, '2026-07-01 20:29:07', '2026-07-01 20:29:07'),
@@ -78,7 +62,6 @@ INSERT INTO `layanan` (`id`, `kode`, `nama`, `harga_per_kg`, `durasi_jam`, `tipe
 --
 -- Struktur dari tabel `pengeluaran`
 --
-
 CREATE TABLE `pengeluaran` (
   `id` int(11) NOT NULL,
   `tanggal` date NOT NULL,
@@ -92,18 +75,12 @@ CREATE TABLE `pengeluaran` (
 -- --------------------------------------------------------
 
 --
--- Struktur dari tabel `transaksi`
+-- Struktur dari tabel `transaksi` (HEADER)
 --
-
 CREATE TABLE `transaksi` (
   `id` int(11) NOT NULL,
   `no_nota` varchar(20) NOT NULL,
   `nama_pelanggan` varchar(100) NOT NULL,
-  `layanan_id` int(11) NOT NULL,
-  `berat_kg` decimal(5,2) NOT NULL,
-  `berat_pcs` int(11) NOT NULL DEFAULT 0,
-  `tipe_hitungan` enum('kilo','satuan') NOT NULL DEFAULT 'kilo',
-  `harga_per_kg` decimal(10,0) NOT NULL,
   `total_harga` decimal(12,0) NOT NULL,
   `tanggal_masuk` datetime NOT NULL,
   `tanggal_selesai` datetime NOT NULL,
@@ -115,26 +92,37 @@ CREATE TABLE `transaksi` (
 -- --------------------------------------------------------
 
 --
+-- Struktur dari tabel `transaksi_detail` (DETAIL — 1 baris per layanan dipilih)
+--
+CREATE TABLE `transaksi_detail` (
+  `id` int(11) NOT NULL,
+  `transaksi_id` int(11) NOT NULL,
+  `layanan_id` int(11) NOT NULL,
+  `nama_layanan` varchar(100) NOT NULL,
+  `label_durasi` varchar(30) NOT NULL,
+  `tipe_hitungan` enum('kilo','satuan') NOT NULL DEFAULT 'kilo',
+  `jumlah` decimal(8,2) NOT NULL,
+  `harga_per_unit` decimal(10,0) NOT NULL,
+  `subtotal` decimal(12,0) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Stand-in struktur untuk tampilan `v_transaksi_lengkap`
--- (Lihat di bawah untuk tampilan aktual)
 --
 CREATE TABLE `v_transaksi_lengkap` (
 `id` int(11)
 ,`no_nota` varchar(20)
 ,`nama_pelanggan` varchar(100)
-,`layanan_id` int(11)
-,`nama_layanan` varchar(100)
-,`label_durasi` varchar(30)
-,`tipe_hitungan` enum('kilo','satuan')
-,`berat_kg` decimal(5,2)
-,`berat_pcs` int(11)
-,`harga_per_kg` decimal(10,0)
 ,`total_harga` decimal(12,0)
 ,`tanggal_masuk` datetime
 ,`tanggal_selesai` datetime
 ,`status` enum('pending','selesai','diambil')
 ,`catatan` text
 ,`created_at` datetime
+,`jumlah_item` bigint(21)
+,`daftar_layanan` text
 );
 
 -- --------------------------------------------------------
@@ -144,77 +132,62 @@ CREATE TABLE `v_transaksi_lengkap` (
 --
 DROP TABLE IF EXISTS `v_transaksi_lengkap`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_transaksi_lengkap`  AS SELECT `t`.`id` AS `id`, `t`.`no_nota` AS `no_nota`, `t`.`nama_pelanggan` AS `nama_pelanggan`, `t`.`layanan_id` AS `layanan_id`, `l`.`nama` AS `nama_layanan`, `l`.`label_durasi` AS `label_durasi`, `t`.`tipe_hitungan` AS `tipe_hitungan`, `t`.`berat_kg` AS `berat_kg`, `t`.`berat_pcs` AS `berat_pcs`, `t`.`harga_per_kg` AS `harga_per_kg`, `t`.`total_harga` AS `total_harga`, `t`.`tanggal_masuk` AS `tanggal_masuk`, `t`.`tanggal_selesai` AS `tanggal_selesai`, `t`.`status` AS `status`, `t`.`catatan` AS `catatan`, `t`.`created_at` AS `created_at` FROM (`transaksi` `t` join `layanan` `l` on(`t`.`layanan_id` = `l`.`id`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_transaksi_lengkap` AS
+SELECT t.id, t.no_nota, t.nama_pelanggan, t.total_harga,
+       t.tanggal_masuk, t.tanggal_selesai, t.status, t.catatan, t.created_at,
+       COUNT(d.id) AS jumlah_item,
+       GROUP_CONCAT(d.nama_layanan SEPARATOR ', ') AS daftar_layanan
+FROM (`transaksi` t LEFT JOIN `transaksi_detail` d ON (d.transaksi_id = t.id))
+GROUP BY t.id;
 
 --
 -- Indexes for dumped tables
---
-
---
--- Indeks untuk tabel `admin`
 --
 ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`);
 
---
--- Indeks untuk tabel `layanan`
---
 ALTER TABLE `layanan`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `kode` (`kode`);
 
---
--- Indeks untuk tabel `pengeluaran`
---
 ALTER TABLE `pengeluaran`
   ADD PRIMARY KEY (`id`);
 
---
--- Indeks untuk tabel `transaksi`
---
 ALTER TABLE `transaksi`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `no_nota` (`no_nota`),
+  ADD UNIQUE KEY `no_nota` (`no_nota`);
+
+ALTER TABLE `transaksi_detail`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `transaksi_id` (`transaksi_id`),
   ADD KEY `layanan_id` (`layanan_id`);
 
 --
 -- AUTO_INCREMENT untuk tabel yang dibuang
 --
-
---
--- AUTO_INCREMENT untuk tabel `admin`
---
 ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT untuk tabel `layanan`
---
 ALTER TABLE `layanan`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
---
--- AUTO_INCREMENT untuk tabel `pengeluaran`
---
 ALTER TABLE `pengeluaran`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
---
--- AUTO_INCREMENT untuk tabel `transaksi`
---
 ALTER TABLE `transaksi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+
+ALTER TABLE `transaksi_detail`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 --
 -- Ketidakleluasaan untuk tabel pelimpahan (Dumped Tables)
 --
+ALTER TABLE `transaksi_detail`
+  ADD CONSTRAINT `td_transaksi_fk` FOREIGN KEY (`transaksi_id`) REFERENCES `transaksi` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `td_layanan_fk` FOREIGN KEY (`layanan_id`) REFERENCES `layanan` (`id`) ON UPDATE CASCADE;
 
---
--- Ketidakleluasaan untuk tabel `transaksi`
---
-ALTER TABLE `transaksi`
-  ADD CONSTRAINT `transaksi_ibfk_1` FOREIGN KEY (`layanan_id`) REFERENCES `layanan` (`id`) ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
