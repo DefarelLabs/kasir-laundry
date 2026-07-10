@@ -6,12 +6,11 @@ $db = getDB();
 $filterTgl = $_GET['tgl'] ?? date('Y-m-d');
 $filterTglFormatted = date('d/m/Y', strtotime($filterTgl));
 
+// ── Statistik header (order, pendapatan, status) ────────────────
 $stmtHari = $db->prepare("
     SELECT
         COUNT(*) AS jumlah_order,
         COALESCE(SUM(total_harga),0) AS total_pendapatan,
-        COALESCE(SUM(berat_kg),0) AS total_berat,
-        COALESCE(SUM(berat_pcs),0) AS total_satuan,
         SUM(status='pending') AS pending,
         SUM(status='selesai') AS selesai,
         SUM(status='diambil') AS diambil
@@ -20,13 +19,40 @@ $stmtHari = $db->prepare("
 $stmtHari->execute([$filterTgl]);
 $statHari = $stmtHari->fetch();
 
+// ── Statistik berat/satuan (dari transaksi_detail, join by tanggal header) ──
+$stmtBeratHari = $db->prepare("
+    SELECT
+        COALESCE(SUM(CASE WHEN d.tipe_hitungan='kilo'   THEN d.jumlah ELSE 0 END),0) AS total_berat,
+        COALESCE(SUM(CASE WHEN d.tipe_hitungan='satuan' THEN d.jumlah ELSE 0 END),0) AS total_satuan
+    FROM transaksi_detail d
+    JOIN transaksi t ON t.id = d.transaksi_id
+    WHERE DATE(t.tanggal_masuk)=?
+");
+$stmtBeratHari->execute([$filterTgl]);
+$beratHari = $stmtBeratHari->fetch();
+$statHari['total_berat']  = $beratHari['total_berat'];
+$statHari['total_satuan'] = $beratHari['total_satuan'];
+
 $stmtBulan = $db->prepare("SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total FROM transaksi WHERE YEAR(tanggal_masuk)=YEAR(?) AND MONTH(tanggal_masuk)=MONTH(?)");
 $stmtBulan->execute([$filterTgl, $filterTgl]);
 $statBulan = $stmtBulan->fetch();
 
-$stmtList = $db->prepare("SELECT * FROM v_transaksi_lengkap WHERE DATE(tanggal_masuk)=? ORDER BY tanggal_masuk DESC");
+// ── Daftar transaksi (header) hari ini ───────────────────────────
+$stmtList = $db->prepare("SELECT * FROM transaksi WHERE DATE(tanggal_masuk)=? ORDER BY tanggal_masuk DESC");
 $stmtList->execute([$filterTgl]);
 $transaksiHari = $stmtList->fetchAll();
+
+// ── Ambil semua detail layanan untuk transaksi-transaksi di atas sekaligus ──
+$detailByTransaksi = [];
+$idsHariIni = array_column($transaksiHari, 'id');
+if ($idsHariIni) {
+    $placeholders = implode(',', array_fill(0, count($idsHariIni), '?'));
+    $stmtDet = $db->prepare("SELECT * FROM transaksi_detail WHERE transaksi_id IN ($placeholders) ORDER BY id");
+    $stmtDet->execute($idsHariIni);
+    foreach ($stmtDet->fetchAll() as $row) {
+        $detailByTransaksi[$row['transaksi_id']][] = $row;
+    }
+}
 
 $pageTitle = 'Dashboard';
 require_once '../includes/admin_header.php';
@@ -43,18 +69,18 @@ require_once '../includes/admin_header.php';
 
 <style>
 @media(max-width:768px){
-  /* Tabel dashboard scroll horizontal */
   .dashboard-table-wrap{
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
     width:100%;
   }
   .dashboard-table-wrap table{
-    min-width:700px;
+    min-width:750px;
   }
-  /* Badge status lebih compact */
   .dashboard-table-wrap .badge{font-size:10px;padding:2px 7px}
 }
+.item-line{margin-bottom:2px}
+.item-line:last-child{margin-bottom:0}
 </style>
 
 <div class="stats-grid">
@@ -81,11 +107,20 @@ require_once '../includes/admin_header.php';
         <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th><th>Berat/Pcs</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Status</th><th>Aksi</th></tr></thead>
         <tbody>
           <?php foreach ($transaksiHari as $t): ?>
+          <?php $items = $detailByTransaksi[$t['id']] ?? []; ?>
           <tr>
             <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($t['no_nota']) ?></code></td>
             <td><strong><?= htmlspecialchars($t['nama_pelanggan']) ?></strong></td>
-            <td><?= htmlspecialchars($t['nama_layanan']) ?> <span style="color:var(--gray-400);font-size:11px">(<?= $t['label_durasi'] ?>)</span></td>
-            <td><?= $t['tipe_hitungan'] === 'satuan' ? (int)$t['berat_pcs'] . ' pcs' : number_format($t['berat_kg'],2) . ' kg' ?></td>
+            <td style="font-size:13px">
+              <?php foreach ($items as $it): ?>
+                <div class="item-line"><?= htmlspecialchars($it['nama_layanan']) ?> <span style="color:var(--gray-400);font-size:11px">(<?= htmlspecialchars($it['label_durasi']) ?>)</span></div>
+              <?php endforeach; ?>
+            </td>
+            <td>
+              <?php foreach ($items as $it): ?>
+                <div class="item-line"><?= $it['tipe_hitungan'] === 'satuan' ? (int)$it['jumlah'] . ' pcs' : number_format($it['jumlah'],2) . ' kg' ?></div>
+              <?php endforeach; ?>
+            </td>
             <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_masuk']) ?></td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_selesai']) ?></td>
