@@ -1,5 +1,5 @@
 <?php
-// print_nota.php — Halaman khusus cetak nota (1 atau 2 lembar)
+// print_nota.php — Halaman khusus cetak nota (1 atau 2 lembar), multi-layanan
 // Dipanggil via window.open() dari index.php atau admin
 require_once 'includes/config.php';
 
@@ -10,13 +10,14 @@ $copy = max(1, min(2, $copy)); // Batasi 1-2
 
 if (!$id) { die('ID tidak valid.'); }
 
-// Ambil data transaksi lengkap
+// ── Ambil header transaksi ──────────────────────────────────────
 $stmtH = $db->prepare("SELECT * FROM transaksi WHERE id = ?");
 $stmtH->execute([$id]);
 $d = $stmtH->fetch();
 
 if (!$d) { die('Transaksi tidak ditemukan.'); }
 
+// ── Ambil semua layanan (detail) yang ada di nota ini ───────────
 $stmtD = $db->prepare("SELECT * FROM transaksi_detail WHERE transaksi_id = ? ORDER BY id");
 $stmtD->execute([$id]);
 $items = $stmtD->fetchAll();
@@ -147,13 +148,12 @@ $items = $stmtD->fetchAll();
       font-weight: 600;
       color: #444;
     }
-    
+
     .r-value {
       font-weight: 900;
       color: #111;
       margin-top: 2px;
       font-size: 20px;
-      font-
     }
 
     /* ── Elemen nota ── */
@@ -177,7 +177,6 @@ $items = $stmtD->fetchAll();
       color: #333;
     }
     .copy-block { }
-    /* Tambah border bawah dashed antara 2 copy saat di layar */
     .copy-block + .copy-block {
       margin-top: 12px;
       padding-top: 4px;
@@ -185,12 +184,6 @@ $items = $stmtD->fetchAll();
 
     /* ══════════════════════════════════════════════
        @MEDIA PRINT
-       Sembunyikan semua elemen UI browser.
-       Hanya .nota-area yang keluar di kertas.
-
-       Untuk 2 copy: setiap .copy-block di-break
-       menggunakan page-break-after: always
-       kecuali yang terakhir.
     ══════════════════════════════════════════════ */
     @media print {
       body        { background: none; padding: 0; display: block; }
@@ -198,15 +191,13 @@ $items = $stmtD->fetchAll();
       .paper-outer { background: none; padding: 0; box-shadow: none; }
 
       .nota-area {
-        width: 80mm;          /* Kertas thermal 80mm */
+        width: 80mm;
         padding: 5mm 4mm;
         font-size: 10px;
         box-shadow: none;
       }
-      /* Hapus perforasi saat cetak */
       .nota-area::before, .nota-area::after { display: none; }
 
-      /* Setiap copy dicetak di halaman/section baru */
       .copy-block {
         page-break-after: always;
         page-break-inside: avoid;
@@ -241,11 +232,6 @@ $items = $stmtD->fetchAll();
   <div class="nota-area">
 
     <?php
-    // ── Render 1 atau 2 copy nota ──────────────────────────────
-    // copy=1 → hanya 1 blok nota (untuk pelanggan)
-    // copy=2 → 2 blok nota (pelanggan + arsip pemilik),
-    //          terpisah oleh page-break saat dicetak.
-
     $copyLabels = [1 => 'PELANGGAN', 2 => 'ARSIP / PEMILIK'];
 
     for ($c = 1; $c <= $copy; $c++):
@@ -284,28 +270,29 @@ $items = $stmtD->fetchAll();
 
       <hr class="r-div"/>
 
-      <!-- Detail Order -->
+      <!-- Pelanggan -->
       <div class="r-row">
         <span class="r-key">Pelanggan</span>
         <span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
       </div>
-      <div class="r-row">
-        <span class="r-key">Layanan</span>
-        <span class="r-val"><?= htmlspecialchars($d['nama_layanan']) ?></span>
-      </div>
-      <div class="r-row">
-        <span class="r-key">Durasi</span>
-        <span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span>
-      </div>
-      <?php $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg'; ?>
-      <div class="r-row">
-        <span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span>
-        <span class="r-val"><?= $unit === 'pcs' ? (int)$d['berat_pcs'] : number_format($d['berat_kg'], 2) ?> <?= $unit ?></span>
-      </div>
-      <div class="r-row">
-        <span class="r-key">Harga/<?= $unit ?></span>
-        <span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span>
-      </div>
+
+      <hr class="r-div"/>
+
+      <!-- ── Daftar layanan (bisa lebih dari 1 per nota) ── -->
+      <?php foreach ($items as $it): ?>
+        <?php $unit = $it['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg'; ?>
+        <div class="r-row" style="margin-top:6px">
+          <span class="r-key" style="font-weight:700"><?= htmlspecialchars($it['nama_layanan']) ?></span>
+        </div>
+        <div class="r-row">
+          <span class="r-key">
+            <?= $unit === 'pcs' ? (int)$it['jumlah'] : number_format($it['jumlah'], 2) ?> <?= $unit ?>
+            × <?= rupiah($it['harga_per_unit']) ?>
+          </span>
+          <span class="r-val"><?= rupiah($it['subtotal']) ?></span>
+        </div>
+      <?php endforeach; ?>
+
       <?php if (!empty($d['catatan'])): ?>
       <div class="r-row" style="margin-top:4px">
         <span class="r-key">Catatan</span>
@@ -338,12 +325,9 @@ $items = $stmtD->fetchAll();
         — Permana Laundry —
       </div>
 
-      
-
     </div><!-- /copy-block -->
 
     <?php if (!$isLast): ?>
-      <!-- Tanda pemisah antar copy di tampilan layar -->
       <div class="copy-separator">✂ ✂ ✂ POTONG DI SINI ✂ ✂ ✂</div>
     <?php endif; ?>
 
@@ -353,8 +337,6 @@ $items = $stmtD->fetchAll();
 </div><!-- /paper-outer -->
 
 <script>
-  // Auto-trigger print dialog saat halaman terbuka
-  // Beri jeda 400ms agar font sempat dimuat
   window.addEventListener('load', function() {
     setTimeout(function() { window.print(); }, 400);
   });
