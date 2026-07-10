@@ -253,32 +253,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group">
           <label for="nama">Nama Pelanggan <span class="req">*</span></label>
           <input type="text" id="nama" name="nama" placeholder="cth: Budi Santoso"
-                 value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" autocomplete="off"/>
+                value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" autocomplete="off"/>
         </div>
 
+        <!-- ═══ Baris tambah layanan ke keranjang ═══ -->
         <div class="form-group">
-          <label for="berat" id="beratLabel">Berat Cucian (kg) <span class="req">*</span></label>
-          <input type="number" id="berat" name="berat" placeholder="cth: 3.5"
-                 min="0.1" step="0.1" value="<?= htmlspecialchars($_POST['berat'] ?? '') ?>"/>
-        </div>
-
-        <div class="form-group">
-          <label for="layanan_id">Jenis Layanan <span class="req">*</span></label>
-          <select id="layanan_id" name="layanan_id">
+          <label for="layanan_id">Jenis Layanan</label>
+          <select id="layanan_id">
             <option value="" disabled selected>— Pilih Layanan —</option>
             <?php foreach ($layananList as $l): ?>
             <?php $unitLbl = $l['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg'; ?>
             <option value="<?= $l['id'] ?>"
+                    data-nama="<?= htmlspecialchars($l['nama']) ?>"
                     data-price="<?= $l['harga_per_kg'] ?>"
                     data-hours="<?= $l['durasi_jam'] ?>"
                     data-label="<?= htmlspecialchars($l['label_durasi']) ?>"
-                    data-tipe="<?= $l['tipe_hitungan'] ?>"
-                    <?= (int)($_POST['layanan_id'] ?? 0) === $l['id'] ? 'selected' : '' ?>>
+                    data-tipe="<?= $l['tipe_hitungan'] ?>">
               <?= htmlspecialchars($l['nama']) ?> — <?= rupiah($l['harga_per_kg']) ?>/<?= $unitLbl ?> (<?= htmlspecialchars($l['label_durasi']) ?>)
             </option>
-            
             <?php endforeach; ?>
           </select>
+        </div>
+
+        <div class="form-group" style="flex-direction:row;align-items:end;gap:10px">
+          <div style="flex:1">
+            <label for="jumlah" id="jumlahLabel">Berat/Jumlah</label>
+            <input type="number" id="jumlah" step="0.1" min="0.1" placeholder="cth: 3.5"/>
+          </div>
+          <button type="button" class="btn btn-teal" style="width:auto;white-space:nowrap"
+                  onclick="tambahKeKeranjang()">➕ Tambah</button>
+        </div>
+
+        <!-- ═══ Daftar keranjang sementara ═══ -->
+        <div class="form-group">
+          <label>Keranjang Layanan</label>
+          <div id="keranjangList" style="border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);padding:4px 12px;min-height:40px"></div>
         </div>
 
         <div class="form-group">
@@ -287,7 +296,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     placeholder="cth: Jangan kena pemutih, ada karpet kecil…"><?= htmlspecialchars($_POST['catatan'] ?? '') ?></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary">💾 Simpan & Buat Nota</button>
+        <input type="hidden" name="keranjang_json" id="keranjangJsonInput" value="[]"/>
+        <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>💾 Simpan & Buat Nota</button>
       </form>
     </div>
 
