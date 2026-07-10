@@ -94,7 +94,12 @@ function isLoggedIn(): bool
 
 /**
  * Redirect ke login jika belum login.
- * Dipanggil di awal setiap halaman admin yang perlu proteksi.
+ * Dipanggil di awal setiap halaman yang perlu proteksi.
+ *
+ * @param string $redirectTo  Path relatif tujuan redirect.
+ *                            Default 'login.php' (dipakai oleh halaman di admin/).
+ *                            Halaman di root (index.php) memanggil dengan
+ *                            requireLogin('admin/login.php').
  */
 function requireLogin(string $redirectTo = 'login.php'): void
 {
