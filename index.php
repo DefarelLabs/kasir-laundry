@@ -1,11 +1,15 @@
 <?php
+// index.php — Halaman kasir utama (input transaksi, multi-layanan)
 require_once 'includes/config.php';
-requireLogin('admin/login.php');
+requireLogin('admin/login.php');   // ← proteksi: redirect ke admin/login.php jika belum login
 
 $db = getDB();
+
+// ── Ambil daftar layanan aktif dari DB ────────────────────────
 $layananList = $db->query("SELECT * FROM layanan WHERE aktif=1 ORDER BY id")->fetchAll();
 
-$notaData = null;
+// ── HANDLE POST: simpan transaksi (header + banyak detail) ────
+$notaData = null;  // Data nota yang baru dibuat, dipakai preview & cetak
 $errMsg   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -19,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errMsg = 'Nama pelanggan dan minimal 1 layanan di keranjang wajib diisi.';
     } else {
         // ▼ Jangan percaya harga dari client — ambil ulang tiap layanan dari DB
-        $items = [];
+        $items        = [];
         $totalHarga   = 0;
         $maxDurasiJam = 0;
 
@@ -175,6 +179,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .r-copy-label{text-align:center;font-size:10px;font-weight:700;letter-spacing:2px;border:1px dashed #aaa;padding:2px 6px;margin-bottom:8px}
     .r-placeholder{text-align:center;padding:30px 14px;color:var(--gray-400);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px}
     .r-placeholder .ph{font-size:34px;margin-bottom:10px}
+    .keranjang-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--gray-100)}
+    .keranjang-item:last-child{border-bottom:none}
+    .keranjang-nama{font-weight:600;font-size:13px}
+    .keranjang-sub{font-size:12px;color:var(--gray-400)}
+    .keranjang-hapus{background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;padding:2px 6px}
     @media(max-width:720px){
       .main-content{flex-direction:column;padding:20px 16px}
       .panel-receipt{width:100%}
@@ -193,13 +202,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       font-weight: 600;
       color: #444;
     }
-    
+
     .r-value {
       font-weight: 900;
       color: #111;
       margin-top: 2px;
       font-size: 20px;
-      font-
     }
 
     /* ══════════════════════════════════════════
@@ -253,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group">
           <label for="nama">Nama Pelanggan <span class="req">*</span></label>
           <input type="text" id="nama" name="nama" placeholder="cth: Budi Santoso"
-                value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" autocomplete="off"/>
+                 value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" autocomplete="off"/>
         </div>
 
         <!-- ═══ Baris tambah layanan ke keranjang ═══ -->
@@ -297,7 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <input type="hidden" name="keranjang_json" id="keranjangJsonInput" value="[]"/>
-        <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>💾 Simpan & Buat Nota</button>
+        <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>💾 Simpan &amp; Buat Nota</button>
       </form>
     </div>
 
@@ -308,11 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div>
           <div class="price-label">Total Pembayaran</div>
           <div class="price-total" id="totalText">Rp 0</div>
-          <div class="price-break" id="breakText">Isi form untuk menghitung</div>
-        </div>
-        <div class="badge-dur" id="badgeDur" style="display:none">
-          <div class="dl">Selesai</div>
-          <div class="dv" id="badgeVal">—</div>
+          <div class="price-break" id="breakText">Tambahkan layanan ke keranjang</div>
         </div>
       </div>
     </div>
@@ -365,6 +369,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div id="printable-area" style="display:none"></div>
 
 <script>
+// ── Data layanan dari PHP (untuk real-time hitung di JS) ───────
 const layananData = <?php
   $jsData = [];
   foreach ($layananList as $l) {
@@ -378,10 +383,12 @@ const layananData = <?php
   echo json_encode($jsData);
 ?>;
 
+// ── Format Rupiah (JS) ─────────────────────────────────────────
 function fRp(n) {
   return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0}).format(n);
 }
 
+// ── Keranjang layanan (state sementara di client) ───────────────
 let keranjang = [];
 
 // Sesuaikan step/label input jumlah sesuai tipe layanan terpilih
@@ -451,15 +458,14 @@ function renderKeranjang() {
   keranjang.forEach((it, idx) => {
     total += it.subtotal;
     const unit = it.tipe === 'satuan' ? 'pcs' : 'kg';
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--gray-100)">
+    html += `<div class="keranjang-item">
       <div>
-        <div style="font-weight:600;font-size:13px">${it.nama}</div>
-        <div style="font-size:12px;color:var(--gray-400)">${it.jumlah} ${unit} × ${fRp(it.harga)}</div>
+        <div class="keranjang-nama">${it.nama}</div>
+        <div class="keranjang-sub">${it.jumlah} ${unit} × ${fRp(it.harga)}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <strong style="font-size:13px">${fRp(it.subtotal)}</strong>
-        <button type="button" onclick="hapusDariKeranjang(${idx})"
-                style="background:none;border:none;color:var(--red);cursor:pointer;font-size:15px">🗑️</button>
+        <button type="button" class="keranjang-hapus" onclick="hapusDariKeranjang(${idx})" title="Hapus">🗑️</button>
       </div>
     </div>`;
   });
@@ -473,6 +479,7 @@ function renderKeranjang() {
     keranjang.map(it => ({ layanan_id: it.layanan_id, jumlah: it.jumlah }))
   );
 }
+renderKeranjang(); // set state awal (keranjang kosong)
 
 document.getElementById('kasirForm').addEventListener('submit', function (e) {
   if (keranjang.length === 0) {
@@ -481,6 +488,9 @@ document.getElementById('kasirForm').addEventListener('submit', function (e) {
   }
 });
 
+// ── Fungsi cetak nota ──────────────────────────────────────────
+// copy = 1: satu lembar (untuk pelanggan)
+// copy = 2: dua lembar (pelanggan + arsip/pemilik)
 function cetakNota(copy) {
   <?php if ($notaData): ?>
     window.open('print_nota.php?id=<?= $notaData['id'] ?>&copy=' + copy, '_blank');
@@ -493,7 +503,10 @@ function cetakNota(copy) {
 </body>
 </html>
 <?php
-// ── Helper: render HTML nota (dipakai di preview & print) ─────
+// ── Helper: render HTML nota (dipakai di preview) ──────────────
+// $d harus berbentuk seperti $notaData di atas, dengan key 'items'
+// berisi array layanan yang dipesan (nama_layanan, tipe_hitungan,
+// jumlah, harga_per_unit, subtotal).
 function renderNota(array $d, int $copyNum, int $totalCopy): void {
     $isLast  = $copyNum >= $totalCopy;
     $labels  = [1 => 'PELANGGAN', 2 => 'ARSIP / PEMILIK'];
@@ -505,36 +518,54 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <?php if ($totalCopy > 1): ?>
       <div class="r-copy-label"><?= $label ?></div>
       <?php endif; ?>
+
       <div class="r-logo">
         <div class="r-shop">PERMANA LAUNDRY</div>
         <div class="r-tag">Bersih · Rapi · Tepat Waktu</div>
         <div class="r-tag">☎ 0896-9150-2028</div>
       </div>
+
       <hr class="r-div"/>
+
       <div class="r-row"><span class="r-key">No. Nota</span><span class="r-val"><?= htmlspecialchars($d['no_nota']) ?></span></div>
       <div class="r-row"><span class="r-key">Tgl Masuk</span><span class="r-val"><?= $tglMsk ?></span></div>
       <div class="r-row"><span class="r-key">Tgl Selesai</span><span class="r-val"><?= $tglSls ?></span></div>
+
       <hr class="r-div"/>
+
       <div class="r-row"><span class="r-key">Pelanggan</span><span class="r-val"><?= htmlspecialchars($d['nama_pelanggan']) ?></span></div>
-      <div class="r-row"><span class="r-key">Layanan</span><span class="r-val"><?= htmlspecialchars($d['nama_layanan']) ?></span></div>
-      <div class="r-row"><span class="r-key">Durasi</span><span class="r-val"><?= htmlspecialchars($d['label_durasi']) ?></span></div>
-      <!-- tipe hitungan kg/pcs -->
-      <?php
-        $unit = ($d['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'pcs' : 'kg';
-        $qty  = $unit === 'pcs' ? $d['berat_pcs'] : $d['berat_kg'];
-      ?>
-      <div class="r-row"><span class="r-key"><?= $unit === 'pcs' ? 'Jumlah' : 'Berat' ?></span><span class="r-val"><?= $qty ?> <?= $unit ?></span></div>
-      <div class="r-row"><span class="r-key">Harga/<?= $unit ?></span><span class="r-val"><?= rupiah($d['harga_per_kg']) ?></span></div>
-      <!-- batas tipe hitungan -->
+
       <hr class="r-div"/>
+
+      <!-- ── Daftar layanan (bisa lebih dari 1) ── -->
+      <?php foreach ($d['items'] as $it): ?>
+        <?php $unit = $it['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg'; ?>
+        <div class="r-row" style="margin-top:6px">
+          <span class="r-key" style="font-weight:700"><?= htmlspecialchars($it['nama_layanan']) ?></span>
+        </div>
+        <div class="r-row">
+          <span class="r-key">
+            <?= $unit === 'pcs' ? (int)$it['jumlah'] : number_format($it['jumlah'], 2) ?> <?= $unit ?>
+            × <?= rupiah($it['harga_per_unit']) ?>
+          </span>
+          <span class="r-val"><?= rupiah($it['subtotal']) ?></span>
+        </div>
+      <?php endforeach; ?>
+
+      <hr class="r-div"/>
+
       <div class="r-total"><span>TOTAL</span><span><?= rupiah($d['total_harga']) ?></span></div>
+
       <hr class="r-div"/>
+
       <!-- Nama Pelanggan Bawah -->
       <div class="div-name">
         <span class="r-name">Pelanggan</span>
         <span class="r-value"><?= htmlspecialchars($d['nama_pelanggan']) ?></span>
       </div>
+
       <hr class="r-div"/>
+
       <div class="r-foot">Terima kasih! Tunjukkan nota ini saat pengambilan.<br/>— Permana Laundry —</div>
     </div>
 <?php } ?>
