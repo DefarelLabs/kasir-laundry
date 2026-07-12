@@ -420,9 +420,9 @@ require_once '../includes/admin_header.php';
   <div class="table-wrap">
     <table>
       <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Catatan</th></tr></thead>
-      <tbody>
-        <?php foreach ($detailPengeluaran as $p): ?>
-        <tr>
+      <tbody id="tbodyPengeluaran">
+        <?php foreach ($detailPengeluaran as $i => $p): ?>
+        <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>" data-idx="<?= $i ?>">
           <td style="white-space:nowrap;font-size:13px"><?= tglIndoDate($p['tanggal']) ?></td>
           <td><strong><?= htmlspecialchars($p['keterangan']) ?></strong></td>
           <td style="color:var(--red);font-weight:700"><?= rupiah($p['jumlah']) ?></td>
