@@ -388,19 +388,18 @@ require_once '../includes/admin_header.php';
   <?php endif; ?>
 </div>
 
-<!-- ══ MODAL EDIT TRANSAKSI (Nama Pelanggan & Catatan saja) ══ -->
+<!-- ══ MODAL EDIT TRANSAKSI (Header + Layanan/Keranjang) ══ -->
 <div id="modalEditTransaksi" class="modal-overlay" style="display:none">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:480px">
     <div class="modal-head">
       <h3>✏️ Edit Transaksi</h3>
       <button type="button" onclick="closeEditModal()" class="modal-close">✕</button>
     </div>
-    <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px">
-      Untuk mengubah daftar layanan/berat, hapus transaksi ini lalu buat ulang lewat halaman Kasir.
-    </p>
-    <form method="POST">
+
+    <form method="POST" id="formEditTransaksi">
       <input type="hidden" name="aksi" value="edit_transaksi"/>
       <input type="hidden" name="id" id="edit_id"/>
+      <input type="hidden" name="keranjang_json" id="edit_keranjang_json"/>
 
       <div class="form-group">
         <label class="lbl">Nama Pelanggan</label>
@@ -412,8 +411,29 @@ require_once '../includes/admin_header.php';
         <textarea name="catatan" id="edit_catatan" rows="2"></textarea>
       </div>
 
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button type="submit" class="btn btn-primary" style="flex:1">💾 Simpan Perubahan</button>
+      <hr class="r-div" style="border-top:1px dashed var(--gray-200);margin:14px 0"/>
+
+      <label class="lbl">Layanan dalam Nota</label>
+
+      <!-- Daftar layanan yang sudah ada di keranjang edit -->
+      <div id="editKeranjangList" style="margin:8px 0;display:flex;flex-direction:column;gap:6px"></div>
+
+      <!-- Form tambah layanan baru ke keranjang edit -->
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <select id="edit_layanan_id" style="flex:1;min-width:140px">
+          <option value="">— Pilih Layanan —</option>
+          <?php foreach ($layananAktif as $l): ?>
+            <option value="<?= $l['id'] ?>"><?= htmlspecialchars($l['nama']) ?> (<?= rupiah($l['harga_per_kg']) ?>/<?= $l['tipe_hitungan']==='satuan'?'pcs':'kg' ?>)</option>
+          <?php endforeach; ?>
+        </select>
+        <input type="number" id="edit_jumlah" placeholder="Jumlah" step="0.01" min="0.01" style="width:90px"/>
+        <button type="button" class="btn btn-teal btn-sm" onclick="tambahKeKeranjangEdit()">➕</button>
+      </div>
+
+      <div style="text-align:right;margin-top:10px;font-weight:700;font-size:15px" id="edit_total_text">Total: Rp 0</div>
+
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button type="submit" class="btn btn-primary" style="flex:1" id="btnSimpanEdit">💾 Simpan Perubahan</button>
         <button type="button" class="btn btn-outline" onclick="closeEditModal()">Batal</button>
       </div>
     </form>
@@ -421,15 +441,111 @@ require_once '../includes/admin_header.php';
 </div>
 
 <script>
-function openEditModal(id, nama, catatan) {
+// ── Data layanan aktif untuk lookup harga saat tambah layanan baru ──
+const layananDataEdit = {
+  <?php foreach ($layananAktif as $l): ?>
+  "<?= $l['id'] ?>": { nama: "<?= htmlspecialchars($l['nama'], ENT_QUOTES) ?>", tipe: "<?= $l['tipe_hitungan'] ?>", harga: <?= (int)$l['harga_per_kg'] ?> },
+  <?php endforeach; ?>
+};
+
+let keranjangEdit = []; // isi: {layanan_id, nama, tipe, jumlah, harga, subtotal}
+
+function openEditModal(id, nama, catatan, itemsExisting) {
   document.getElementById('edit_id').value = id;
   document.getElementById('edit_nama').value = nama;
   document.getElementById('edit_catatan').value = catatan;
+
+  // Prefill keranjang edit dari transaksi_detail yang sudah ada
+  keranjangEdit = (itemsExisting || []).map(it => ({
+    layanan_id: it.layanan_id,
+    nama: it.nama_layanan,
+    tipe: it.tipe_hitungan,
+    jumlah: parseFloat(it.jumlah),
+    harga: parseFloat(it.harga_per_unit),
+    subtotal: parseFloat(it.subtotal),
+  }));
+
+  renderKeranjangEdit();
   document.getElementById('modalEditTransaksi').style.display = 'flex';
 }
+
 function closeEditModal() {
   document.getElementById('modalEditTransaksi').style.display = 'none';
 }
+
+function tambahKeKeranjangEdit() {
+  const sel = document.getElementById('edit_layanan_id');
+  const lid = sel.value;
+  const jumlahInput = document.getElementById('edit_jumlah');
+  const jumlah = parseFloat(jumlahInput.value);
+
+  if (!lid) { alert('Pilih layanan terlebih dahulu.'); return; }
+  const d = layananDataEdit[lid];
+  if (!jumlah || jumlah <= 0) { alert('Isi jumlah/berat dengan benar.'); return; }
+  if (d.tipe === 'satuan' && jumlah !== Math.floor(jumlah)) {
+    alert('Untuk layanan Satuan, jumlah harus bulat (cth: 5, bukan 5.5).');
+    return;
+  }
+
+  keranjangEdit.push({
+    layanan_id: lid, nama: d.nama, tipe: d.tipe,
+    jumlah: jumlah, harga: d.harga, subtotal: jumlah * d.harga,
+  });
+
+  jumlahInput.value = '';
+  renderKeranjangEdit();
+}
+
+function hapusDariKeranjangEdit(idx) {
+  keranjangEdit.splice(idx, 1);
+  renderKeranjangEdit();
+}
+
+function renderKeranjangEdit() {
+  const wrap = document.getElementById('editKeranjangList');
+  const totEl = document.getElementById('edit_total_text');
+  const btnSimpan = document.getElementById('btnSimpanEdit');
+
+  if (keranjangEdit.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--gray-400);font-size:13px;text-align:center;padding:6px 0">Belum ada layanan</p>';
+    totEl.textContent = 'Total: Rp 0';
+    btnSimpan.disabled = true;
+    document.getElementById('edit_keranjang_json').value = '[]';
+    return;
+  }
+
+  let html = '';
+  let total = 0;
+  keranjangEdit.forEach((it, idx) => {
+    total += it.subtotal;
+    const unit = it.tipe === 'satuan' ? 'pcs' : 'kg';
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:8px 10px">
+      <div>
+        <div style="font-weight:600;font-size:13px">${it.nama}</div>
+        <div style="font-size:11px;color:var(--gray-400)">${it.jumlah} ${unit} × Rp ${Number(it.harga).toLocaleString('id-ID')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <strong style="font-size:13px">Rp ${Number(it.subtotal).toLocaleString('id-ID')}</strong>
+        <button type="button" class="btn btn-danger btn-sm" onclick="hapusDariKeranjangEdit(${idx})">🗑️</button>
+      </div>
+    </div>`;
+  });
+
+  wrap.innerHTML = html;
+  totEl.textContent = 'Total: Rp ' + total.toLocaleString('id-ID');
+  btnSimpan.disabled = false;
+
+  document.getElementById('edit_keranjang_json').value = JSON.stringify(
+    keranjangEdit.map(it => ({ layanan_id: it.layanan_id, jumlah: it.jumlah }))
+  );
+}
+
+document.getElementById('formEditTransaksi').addEventListener('submit', function (e) {
+  if (keranjangEdit.length === 0) {
+    e.preventDefault();
+    alert('Tambahkan minimal 1 layanan sebelum menyimpan!');
+  }
+});
 </script>
 
 <?php require_once '../includes/admin_footer.php'; ?>
