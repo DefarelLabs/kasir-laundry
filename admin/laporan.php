@@ -189,6 +189,25 @@ require_once '../includes/admin_header.php';
 .filter-card{overflow:visible!important;max-width:100%}
 #customRange form{flex-wrap:wrap}
 #customRange input[type=date]{width:100%;max-width:160px}
+
+/* ── Collapse Detail Pengeluaran ── */
+.row-collapsible.is-hidden { display: none; }
+.btn-toggle-rows {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background: var(--gray-50);
+  border: 1px dashed var(--gray-200);
+  border-radius: 8px;
+  color: var(--blue-mid);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.btn-toggle-rows:hover { background: var(--blue-light); }
+
 @media(max-width:768px){
   .laporan-grid-2{grid-template-columns:1fr}
   .keuangan-grid{grid-template-columns:1fr}
