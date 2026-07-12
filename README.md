@@ -7,25 +7,27 @@
 ## ✨ Fitur Utama
 
 ### 🧾 Kasir (Transaksi Baru)
+- **Halaman kasir kini dilindungi login** — hanya admin yang sudah login yang bisa membuka `index.php` (redirect otomatis ke `admin/login.php` jika belum login)
+- **Keranjang multi-layanan**: 1 nota kini bisa berisi lebih dari satu jenis layanan sekaligus (misal Cuci Reguler + Cuci Sepatu dalam 1 nota), ditambahkan satu per satu ke keranjang sebelum disimpan
 - Input nama pelanggan, jumlah cucian, dan jenis layanan
 - **Dua tipe hitungan layanan**: ⚖️ **Kilo** (berat desimal, cth: 3.5 kg) dan 🔢 **Satuan** (jumlah bulat, cth: 5 pcs) — kolom input otomatis menyesuaikan (step & validasi) sesuai tipe layanan yang dipilih
-- Kalkulasi harga **real-time** (Jumlah × Harga/Kilo atau Harga/Satuan)
+- Kalkulasi harga **real-time** (Jumlah × Harga/Kilo atau Harga/Satuan), dijumlah otomatis dari seluruh layanan di keranjang
 - Nomor nota otomatis: format `PL-YYYYMMDD-001`
-- Tanggal selesai dihitung otomatis dari durasi layanan
-- Cetak nota **1 lembar** (pelanggan) atau **2 lembar** (pelanggan + arsip), label nota otomatis menampilkan "kg" atau "pcs" sesuai tipe layanan
+- Tanggal selesai dihitung otomatis dari durasi layanan **terlama** di antara layanan yang dipilih dalam 1 nota
+- Cetak nota **1 lembar** (pelanggan) atau **2 lembar** (pelanggan + arsip), menampilkan seluruh layanan dalam nota tersebut berurutan ke bawah beserta total keseluruhan
 
 ### 📊 Dashboard Admin
 - Filter transaksi per tanggal — bisa mundur ke hari sebelumnya
 - Statistik harian: jumlah order, pendapatan, **Total Berat (kg)** dan **Total Satuan (pcs) dipisah** (tidak lagi digabung jadi satu angka)
 - Ringkasan status: Pending / Selesai / Diambil
-- Kolom "Berat/Pcs" pada tabel daftar order menampilkan satuan yang sesuai per transaksi
+- Kolom "Layanan" dan "Berat/Pcs" pada tabel daftar order menampilkan **seluruh layanan dalam 1 nota** (bisa lebih dari satu baris per transaksi)
 
 ### 📋 Data Transaksi
 - Filter per **bulan** atau **tanggal tertentu**
 - Pencarian nama pelanggan / nomor nota
 - Update status langsung dari tabel (dropdown inline)
-- **✏️ Edit transaksi** — ubah nama pelanggan, layanan, jumlah, dan catatan langsung lewat modal popup (harga & total otomatis dihitung ulang)
-- **🗑️ Hapus transaksi** — dengan dialog konfirmasi sebelum data dihapus permanen
+- **✏️ Edit transaksi** — ubah Nama Pelanggan dan Catatan langsung lewat modal popup (untuk mengubah daftar layanan/berat dalam nota, hapus transaksi lalu buat ulang lewat halaman Kasir)
+- **🗑️ Hapus transaksi** — dengan dialog konfirmasi sebelum data dihapus permanen (menghapus header otomatis menghapus seluruh detail layanannya)
 - Statistik **Total Berat** dan **Total Satuan** ditampilkan terpisah sesuai periode filter
 - Cetak ulang nota dari halaman ini
 
@@ -46,7 +48,7 @@
   - **Pendapatan Bersih** — hanya dihitung dari transaksi berstatus **Diambil** (dianggap sudah lunas), dikurangi Total Pengeluaran
 - Rekap per hari dan per jenis layanan, dengan **Berat (kg)** dan **Satuan (pcs)** ditampilkan terpisah
 - Top 5 pelanggan terbanyak order
-- **Export CSV** untuk dianalisis di Excel (BOM UTF-8, siap dibuka langsung), sudah menyertakan kolom Jumlah, Satuan, dan Pendapatan (Status Diambil)
+- **Export CSV** untuk dianalisis di Excel (BOM UTF-8, siap dibuka langsung) — 1 baris CSV mewakili 1 layanan (bukan 1 nota), sehingga nota dengan banyak layanan tetap tercatat rinci per layanan
 - Tampilan print-friendly
 
 ---
@@ -60,7 +62,7 @@
 | Frontend   | HTML5, CSS3 (Flexbox/Grid), Vanilla JavaScript (ES5 compat.) |
 | Fonts      | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans), [Source Code Pro](https://fonts.google.com/specimen/Source+Code+Pro) (Google Fonts) |
 | Print      | CSS `@media print`, kertas thermal 80mm                      |
-| Keamanan   | bcrypt password hash, PDO prepared statements                |
+| Keamanan   | bcrypt password hash, PDO prepared statements, session login (juga melindungi halaman Kasir) |
 
 ---
 
@@ -69,10 +71,11 @@
 ```
 kasir-laundry/
 │
-├── index.php                   ← Halaman kasir (input transaksi baru, kilo/satuan)
-├── print_nota.php              ← Halaman cetak nota thermal (1 / 2 lembar)
+├── index.php                   ← Halaman kasir (dilindungi login, keranjang multi-layanan)
+├── print_nota.php              ← Halaman cetak nota thermal (1 / 2 lembar, multi-layanan per nota)
 ├── setup.php                   ← Setup awal password admin (hapus setelah dipakai!)
-├── database.sql                ← SQL untuk membuat database & data awal
+├── database.sql                ← SQL install BARU dari nol (skema Header & Detail)
+├── migration_multi_layanan.sql ← SQL migrasi untuk database LAMA yang sudah ada datanya
 │
 ├── assets/
 │   ├── css/
@@ -86,13 +89,13 @@ kasir-laundry/
 │   └── admin_footer.php        ← Layout: penutup tag HTML
 │
 └── admin/
-    ├── login.php               ← Halaman login admin
-    ├── logout.php              ← Proses logout (destroy session)
-    ├── dashboard.php           ← Dashboard dengan filter tanggal & statistik kg/pcs
-    ├── transaksi.php           ← Data transaksi + filter + edit + hapus + update status
-    ├── layanan.php             ← CRUD jenis layanan, harga, & tipe hitungan
-    ├── pengeluaran.php         ← Catat & kelola pengeluaran operasional
-    └── laporan.php             ← Laporan periode, Pendapatan Kotor/Bersih, export CSV
+    ├── login.php               ← Halaman login admin (juga dipakai untuk login ke Kasir)
+    ├── logout.php               ← Proses logout (destroy session)
+    ├── dashboard.php            ← Dashboard dengan filter tanggal & statistik kg/pcs
+    ├── transaksi.php            ← Data transaksi + filter + edit header + hapus + update status
+    ├── layanan.php              ← CRUD jenis layanan, harga, & tipe hitungan
+    ├── pengeluaran.php          ← Catat & kelola pengeluaran operasional
+    └── laporan.php              ← Laporan periode, Pendapatan Kotor/Bersih, export CSV
 ```
 
 ---
@@ -114,11 +117,10 @@ C:\xampp\htdocs\kasir-laundry\
 
 1. Jalankan XAMPP, aktifkan **Apache** dan **MySQL**
 2. Buka `http://localhost/phpmyadmin`
-3. Klik tab **Import** → pilih file `database.sql` → klik **Go**
+3. **Instalasi baru (database masih kosong)**: klik tab **Import** → pilih file `database.sql` → klik **Go**
+4. **Upgrade dari versi lama (database sudah ada datanya)**: backup dulu lewat tab **Export**, lalu buka tab **SQL** pada database yang sama dan jalankan isi `migration_multi_layanan.sql` — jangan gunakan `database.sql` untuk kasus ini
 
-Atau via tab **SQL**, paste seluruh isi `database.sql` lalu klik **Go**.
-
-> `database.sql` sudah mencakup kolom `tipe_hitungan` (di tabel `layanan` & `transaksi`) serta `berat_kg` dan `berat_pcs` yang terpisah di tabel `transaksi`.
+> `database.sql` sudah mencakup skema **Header & Detail**: tabel `transaksi` (header nota) dan `transaksi_detail` (1 baris per layanan dalam nota, termasuk `tipe_hitungan`, `jumlah`, `harga_per_unit`, `subtotal`).
 
 ### Langkah 3 — Sesuaikan konfigurasi
 
@@ -143,7 +145,7 @@ http://localhost/permana-laundry/setup.php
 
 | Halaman              | URL                                                   |
 |----------------------|-------------------------------------------------------|
-| Kasir (input order)  | `http://localhost/kasir-laundry/`                   |
+| Kasir (input order)  | `http://localhost/kasir-laundry/` *(perlu login admin)* |
 | Login Admin          | `http://localhost/kasir-laundry/admin/login.php`    |
 | Dashboard Admin      | `http://localhost/kasir-laundry/admin/dashboard.php`|
 
@@ -168,12 +170,12 @@ http://localhost/permana-laundry/setup.php
 
 Setiap layanan (di menu **Kelola Layanan**) memiliki salah satu dari dua tipe hitungan:
 
-| Tipe       | Contoh Layanan            | Format Input     | Kolom Penyimpanan di `transaksi` |
-|------------|----------------------------|------------------|-----------------------------------|
-| ⚖️ Kilo    | Cuci Reguler, Express, Kilat | Desimal (cth: 3.5) | `berat_kg`                        |
-| 🔢 Satuan  | Cuci Sepatu, Setrika Kemeja | Bulat (cth: 5)      | `berat_pcs`                       |
+| Tipe       | Contoh Layanan            | Format Input     | Kolom Penyimpanan di `transaksi_detail` |
+|------------|----------------------------|------------------|-------------------------------------------|
+| ⚖️ Kilo    | Cuci Reguler, Express, Kilat | Desimal (cth: 3.5) | `jumlah` (dengan `tipe_hitungan`='kilo')  |
+| 🔢 Satuan  | Cuci Sepatu, Setrika Kemeja | Bulat (cth: 5)      | `jumlah` (dengan `tipe_hitungan`='satuan') |
 
-Kedua kolom (`berat_kg` dan `berat_pcs`) disimpan **terpisah secara fisik** di tabel `transaksi` — transaksi Kilo akan mengisi `berat_pcs = 0`, dan sebaliknya transaksi Satuan akan mengisi `berat_kg = 0`. Dengan begitu, semua penjumlahan statistik (Dashboard, Data Transaksi, Laporan) tidak akan pernah tercampur antara kg dan pcs.
+Setiap layanan yang dipilih dalam 1 nota tersimpan sebagai 1 baris di `transaksi_detail`, lengkap dengan `tipe_hitungan`-nya sendiri. Dengan begitu, 1 nota bisa berisi campuran layanan Kilo dan Satuan sekaligus, dan semua penjumlahan statistik (Dashboard, Data Transaksi, Laporan) tetap dipisah per tipe tanpa tercampur.
 
 ---
 
@@ -212,21 +214,32 @@ Tips cetak via browser:
 |------------------------|-------------------------------------------------------------------------------------------|
 | `admin`                | Akun admin dengan password bcrypt                                                         |
 | `layanan`               | Jenis layanan: kode, nama, harga, **tipe_hitungan** (kilo/satuan), durasi, status aktif  |
-| `transaksi`             | Setiap baris = 1 order pelanggan, dengan **berat_kg**, **berat_pcs**, dan **tipe_hitungan** (snapshot dari layanan saat transaksi dibuat) |
+| `transaksi`             | **Header** nota: nama pelanggan, total harga (dijumlah dari semua layanan di nota), tanggal, status, catatan |
+| `transaksi_detail`      | **Detail** nota: 1 baris per layanan yang dipilih dalam 1 nota (nama layanan, tipe_hitungan, jumlah, harga_per_unit, subtotal — snapshot dari layanan saat transaksi dibuat) |
 | `pengeluaran`           | Catatan pengeluaran operasional harian                                                    |
-| `v_transaksi_lengkap`   | View JOIN transaksi + layanan, membawa `layanan_id`, `tipe_hitungan`, `berat_kg`, `berat_pcs` untuk query lebih mudah |
+| `v_transaksi_lengkap`   | View: header `transaksi` + ringkasan jumlah item & daftar nama layanan (`GROUP_CONCAT`) per nota |
 
 ### Kolom penting di tabel `layanan`
 ```sql
 tipe_hitungan ENUM('kilo','satuan') NOT NULL DEFAULT 'kilo'
 ```
 
-### Kolom penting di tabel `transaksi`
+### Kolom penting di tabel `transaksi` (Header)
 ```sql
-berat_kg       DECIMAL(5,2)  NOT NULL DEFAULT 0   -- diisi jika tipe_hitungan = 'kilo'
-berat_pcs      INT           NOT NULL DEFAULT 0   -- diisi jika tipe_hitungan = 'satuan'
-tipe_hitungan  ENUM('kilo','satuan') NOT NULL DEFAULT 'kilo'
+total_harga      DECIMAL(12,0) NOT NULL   -- total gabungan seluruh layanan di nota ini
+tanggal_selesai  DATETIME      NOT NULL   -- dihitung dari durasi layanan TERLAMA di nota
 ```
+
+### Kolom penting di tabel `transaksi_detail` (Detail)
+```sql
+transaksi_id    INT            NOT NULL   -- FK ke transaksi.id, ON DELETE CASCADE
+layanan_id      INT            NOT NULL   -- FK ke layanan.id
+tipe_hitungan   ENUM('kilo','satuan') NOT NULL DEFAULT 'kilo'
+jumlah          DECIMAL(8,2)   NOT NULL   -- berat (kg) atau jumlah (pcs), sesuai tipe_hitungan
+subtotal        DECIMAL(12,0)  NOT NULL   -- jumlah × harga_per_unit, untuk layanan ini saja
+```
+
+> 🔁 **Migrasi dari versi lama:** jika sebelumnya tabel `transaksi` Anda masih memiliki kolom `layanan_id`, `berat_kg`, `berat_pcs`, `tipe_hitungan`, `harga_per_kg` langsung (1 transaksi = 1 layanan), gunakan `migration_multi_layanan.sql` untuk memindahkan data lama ke `transaksi_detail` sebelum kolom-kolom tersebut dihapus dari `transaksi`.
 
 ---
 
