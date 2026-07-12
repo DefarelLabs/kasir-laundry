@@ -438,8 +438,15 @@ require_once '../includes/admin_header.php';
         </tr>
       </tfoot>
     </table>
+    </div>
+      <?php if (count($detailPengeluaran) > 5): ?>
+        <button type="button" class="btn-toggle-rows" id="btnToggleRows" onclick="toggleRowsPengeluaran()">
+          ⬇️ Tampilkan Semua (<?= count($detailPengeluaran) - 5 ?> lagi)
+        </button>
+      <?php endif; ?>
+      <?php endif; ?>
   </div>
-  <?php endif; ?>
+
 </div>
 
 <!-- ── Top Pelanggan ── -->
