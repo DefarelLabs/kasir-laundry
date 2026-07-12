@@ -5,23 +5,111 @@ requireLogin();
 
 $db = getDB();
 
+// ── Daftar layanan aktif, dipakai untuk dropdown "tambah layanan" di modal edit ──
+$layananAktif = $db->query("SELECT * FROM layanan WHERE aktif=1 ORDER BY id")->fetchAll();
+
 // ── HANDLE POST: edit transaksi (level header saja) ─────────────
 // Catatan: karena 1 transaksi sekarang bisa berisi BANYAK layanan,
 // edit di sini hanya untuk Nama Pelanggan & Catatan. Kalau ingin
 // mengubah daftar layanan/berat, hapus transaksi ini lalu buat ulang
 // dari halaman Kasir (index.php).
+// ── HANDLE POST: edit transaksi (HEADER + DETAIL/keranjang) ─────────────
+// Sekarang admin BISA mengubah daftar layanan & jumlah/berat langsung dari sini.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_transaksi') {
-    $id      = (int)($_POST['id'] ?? 0);
-    $nama    = trim($_POST['nama_pelanggan'] ?? '');
-    $catatan = trim($_POST['catatan'] ?? '');
+    $id            = (int)($_POST['id'] ?? 0);
+    $nama          = trim($_POST['nama_pelanggan'] ?? '');
+    $catatan       = trim($_POST['catatan'] ?? '');
+    $keranjangJson = $_POST['keranjang_json'] ?? '[]';
+    $keranjangRaw  = json_decode($keranjangJson, true);
+    $keranjangRaw  = is_array($keranjangRaw) ? $keranjangRaw : [];
 
-    if (!$id || !$nama) {
-        setFlash('error', 'Nama pelanggan wajib diisi.');
-    } else {
-        $db->prepare("UPDATE transaksi SET nama_pelanggan=?, catatan=? WHERE id=?")
-           ->execute([$nama, $catatan ?: null, $id]);
-        setFlash('success', "Transaksi \"$nama\" berhasil diperbarui.");
+    if (!$id || !$nama || empty($keranjangRaw)) {
+        setFlash('error', 'Nama pelanggan dan minimal 1 layanan wajib diisi.');
+        header('Location: transaksi.php');
+        exit;
     }
+
+    // ▼ Jangan percaya harga dari client — ambil ulang tiap layanan dari DB
+    //   (tanpa filter aktif=1, supaya layanan lama yang sudah dinonaktifkan
+    //   tetap bisa dipertahankan kalau memang sudah ada di nota tersebut)
+    $items        = [];
+    $totalHarga   = 0;
+    $maxDurasiJam = 0;
+
+    foreach ($keranjangRaw as $row) {
+        $lid    = (int)($row['layanan_id'] ?? 0);
+        $jumlah = (float)($row['jumlah'] ?? 0);
+
+        $stmtL = $db->prepare("SELECT * FROM layanan WHERE id=?");
+        $stmtL->execute([$lid]);
+        $layanan = $stmtL->fetch();
+
+        if (!$layanan || $jumlah <= 0) continue;
+        if ($layanan['tipe_hitungan'] === 'satuan' && $jumlah != (int)$jumlah) continue;
+
+        $subtotal      = $jumlah * $layanan['harga_per_kg'];
+        $totalHarga   += $subtotal;
+        $maxDurasiJam  = max($maxDurasiJam, (int)$layanan['durasi_jam']);
+
+        $items[] = [
+            'layanan_id'     => $lid,
+            'nama_layanan'   => $layanan['nama'],
+            'label_durasi'   => $layanan['label_durasi'],
+            'tipe_hitungan'  => $layanan['tipe_hitungan'],
+            'jumlah'         => $jumlah,
+            'harga_per_unit' => $layanan['harga_per_kg'],
+            'subtotal'       => $subtotal,
+        ];
+    }
+
+    if (empty($items)) {
+        setFlash('error', 'Tidak ada layanan valid di keranjang edit.');
+        header('Location: transaksi.php');
+        exit;
+    }
+
+    try {
+        $db->beginTransaction();
+
+        // Tanggal selesai dihitung ulang dari tanggal_masuk ASLI (tidak diubah)
+        // + durasi layanan TERLAMA di antara layanan yang baru dipilih
+        $stmtOld = $db->prepare("SELECT tanggal_masuk FROM transaksi WHERE id=?");
+        $stmtOld->execute([$id]);
+        $old = $stmtOld->fetch();
+        if (!$old) throw new Exception('Transaksi tidak ditemukan.');
+
+        $tglMasuk   = new DateTime($old['tanggal_masuk']);
+        $tglSelesai = (clone $tglMasuk)->modify("+{$maxDurasiJam} hours");
+
+        // 1) Update header
+        $db->prepare("
+            UPDATE transaksi
+            SET nama_pelanggan=?, catatan=?, total_harga=?, tanggal_selesai=?
+            WHERE id=?
+        ")->execute([$nama, $catatan ?: null, $totalHarga, $tglSelesai->format('Y-m-d H:i:s'), $id]);
+
+        // 2) Hapus semua detail lama, insert detail baru
+        $db->prepare("DELETE FROM transaksi_detail WHERE transaksi_id=?")->execute([$id]);
+
+        $stmtD = $db->prepare("
+            INSERT INTO transaksi_detail
+                (transaksi_id, layanan_id, nama_layanan, label_durasi, tipe_hitungan, jumlah, harga_per_unit, subtotal)
+            VALUES (?,?,?,?,?,?,?,?)
+        ");
+        foreach ($items as $it) {
+            $stmtD->execute([
+                $id, $it['layanan_id'], $it['nama_layanan'], $it['label_durasi'],
+                $it['tipe_hitungan'], $it['jumlah'], $it['harga_per_unit'], $it['subtotal'],
+            ]);
+        }
+
+        $db->commit();
+        setFlash('success', "Transaksi \"$nama\" berhasil diperbarui (layanan & total ikut disesuaikan).");
+    } catch (Exception $e) {
+        $db->rollBack();
+        setFlash('error', 'Gagal memperbarui transaksi. Coba lagi.');
+    }
+
     header('Location: transaksi.php');
     exit;
 }
@@ -281,8 +369,7 @@ require_once '../includes/admin_header.php';
               title="Cetak 1">🖨️×1</a>
             <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm"
               title="Cetak 2">🖨️×2</a>
-            <button type="button" class="btn btn-warning btn-sm" title="Edit Nama/Catatan"
-              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>')">✏️</button>
+            <button type="button" class="btn btn-warning btn-sm" title="Edit Transaksi" onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>', <?= htmlspecialchars(json_encode($items), ENT_QUOTES) ?>)">✏️</button>
             <a href="?hapus=<?= $t['id'] ?>" class="btn btn-danger btn-sm" title="Hapus"
               onclick="return confirm('Hapus transaksi <?= htmlspecialchars($t['no_nota'], ENT_QUOTES) ?> milik <?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>?\nData tidak bisa dikembalikan!')">🗑️</a>
           </td>
