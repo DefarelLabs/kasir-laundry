@@ -75,7 +75,6 @@ kasir-laundry/
 ├── print_nota.php              ← Halaman cetak nota thermal (1 / 2 lembar, multi-layanan per nota)
 ├── setup.php                   ← Setup awal password admin (hapus setelah dipakai!)
 ├── database.sql                ← SQL install BARU dari nol (skema Header & Detail)
-├── migration_multi_layanan.sql ← SQL migrasi untuk database LAMA yang sudah ada datanya
 │
 ├── assets/
 │   ├── css/
@@ -118,7 +117,6 @@ C:\xampp\htdocs\kasir-laundry\
 1. Jalankan XAMPP, aktifkan **Apache** dan **MySQL**
 2. Buka `http://localhost/phpmyadmin`
 3. **Instalasi baru (database masih kosong)**: klik tab **Import** → pilih file `database.sql` → klik **Go**
-4. **Upgrade dari versi lama (database sudah ada datanya)**: backup dulu lewat tab **Export**, lalu buka tab **SQL** pada database yang sama dan jalankan isi `migration_multi_layanan.sql` — jangan gunakan `database.sql` untuk kasus ini
 
 > `database.sql` sudah mencakup skema **Header & Detail**: tabel `transaksi` (header nota) dan `transaksi_detail` (1 baris per layanan dalam nota, termasuk `tipe_hitungan`, `jumlah`, `harga_per_unit`, `subtotal`).
 
@@ -136,7 +134,7 @@ define('DB_NAME', 'db_kasir_laundry');
 ### Langkah 4 — Setup password admin
 
 ```
-http://localhost/permana-laundry/setup.php
+http://localhost/kasir-laundry/setup.php
 ```
 
 > ⚠️ **Penting:** Hapus `setup.php` dari server setelah langkah ini selesai!
