@@ -189,7 +189,7 @@ function exportCSV() {
     ['Tanggal', 'Keterangan', 'Jumlah', 'Catatan']);
 
   (d.pengeluaran || []).forEach(function (p) {
-    rows.push([p.tanggal, p.keterangan, p.jumlah, p.catatan || '']);
+  rows.push([p.tanggal, '', p.jumlah, p.catatan || '']); // kolom "Keterangan" dikosongkan karena sudah direkap per tanggal
   });
 
   rows.push(
