@@ -135,6 +135,30 @@ function toggleCustom(e) {
 }
 
 /* ════════════════════════════════════════════════════════════
+   LAPORAN — Toggle "Tampilkan Semua" pada Detail Pengeluaran
+════════════════════════════════════════════════════════════ */
+function toggleRowsPengeluaran() {
+  var rows = document.querySelectorAll('#tbodyPengeluaran .row-collapsible.is-hidden, #tbodyPengeluaran .row-collapsible[data-expanded="1"]');
+  var btn  = document.getElementById('btnToggleRows');
+  var allRows = document.querySelectorAll('#tbodyPengeluaran .row-collapsible');
+  var isExpanded = btn.dataset.expanded === '1';
+
+  allRows.forEach(function (row, idx) {
+    if (idx >= 5) {
+      row.classList.toggle('is-hidden', isExpanded);
+    }
+  });
+
+  if (isExpanded) {
+    btn.textContent = '⬇️ Tampilkan Semua (' + (allRows.length - 5) + ' lagi)';
+    btn.dataset.expanded = '0';
+  } else {
+    btn.textContent = '⬆️ Sembunyikan';
+    btn.dataset.expanded = '1';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
    LAPORAN — Export CSV
    Data transaksi & pengeluaran di-inject oleh PHP ke variabel
    global `window.laporanData` sebelum script ini dipanggil.
