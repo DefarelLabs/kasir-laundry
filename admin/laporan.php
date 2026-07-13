@@ -139,10 +139,14 @@ $stmtLayanan = $db->prepare("
 $stmtLayanan->execute([$tglMulai, $tglAkhir]);
 $dataLayanan = $stmtLayanan->fetchAll();
 
-// ── QUERY: Detail pengeluaran ───────────────────────────────────
+// ── QUERY: Rekap pengeluaran DIKELOMPOKKAN PER TANGGAL ─────────
+// Hanya menampilkan Tanggal & Total (tanpa rincian keterangan/catatan)
 $stmtDetPengeluaran = $db->prepare("
-    SELECT * FROM pengeluaran WHERE tanggal BETWEEN ? AND ?
-    ORDER BY tanggal DESC, id DESC
+    SELECT tanggal, COALESCE(SUM(jumlah),0) AS total_hari, COUNT(*) AS jml_item
+    FROM pengeluaran
+    WHERE tanggal BETWEEN ? AND ?
+    GROUP BY DATE(tanggal)
+    ORDER BY tanggal DESC
 ");
 $stmtDetPengeluaran->execute([$tglMulai, $tglAkhir]);
 $detailPengeluaran = $stmtDetPengeluaran->fetchAll();
@@ -409,9 +413,9 @@ require_once '../includes/admin_header.php';
   </div>
 </div>
 
-<!-- ── Detail Pengeluaran ── -->
+<!-- ── Rekap Pengeluaran per Tanggal ── -->
 <div class="card" style="margin-bottom:20px">
-  <div class="card-title">💸 Detail Pengeluaran — <?= $periodeLabel ?></div>
+  <div class="card-title">💸 Rekap Pengeluaran per Tanggal — <?= $periodeLabel ?></div>
   <?php if (empty($detailPengeluaran)): ?>
     <div style="text-align:center;padding:24px;color:var(--gray-400)">
       <div style="font-size:28px;margin-bottom:8px">🎉</div>Tidak ada pengeluaran pada periode ini.
@@ -419,34 +423,29 @@ require_once '../includes/admin_header.php';
   <?php else: ?>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Catatan</th></tr></thead>
+      <thead><tr><th>Tanggal</th><th>Total Pengeluaran</th></tr></thead>
       <tbody id="tbodyPengeluaran">
         <?php foreach ($detailPengeluaran as $i => $p): ?>
         <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>" data-idx="<?= $i ?>">
-          <td style="white-space:nowrap;font-size:13px"><?= tglIndoDate($p['tanggal']) ?></td>
-          <td><strong><?= htmlspecialchars($p['keterangan']) ?></strong></td>
-          <td style="color:var(--red);font-weight:700"><?= rupiah($p['jumlah']) ?></td>
-          <td style="font-size:12px;color:var(--gray-600)"><?= $p['catatan'] ? htmlspecialchars($p['catatan']) : '<span style="color:var(--gray-400)">—</span>' ?></td>
+          <td style="white-space:nowrap;font-size:13px"><strong><?= tglIndoDate($p['tanggal']) ?></strong></td>
+          <td style="color:var(--red);font-weight:700"><?= rupiah($p['total_hari']) ?></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
       <tfoot>
         <tr style="background:var(--red-light);font-weight:700">
-          <td colspan="2" style="padding:10px 12px">TOTAL PENGELUARAN</td>
+          <td style="padding:10px 12px">TOTAL PENGELUARAN</td>
           <td style="color:var(--red);font-weight:800"><?= rupiah($totalPengeluaran) ?></td>
-          <td></td>
         </tr>
       </tfoot>
     </table>
-    </div>
-      <?php if (count($detailPengeluaran) > 5): ?>
-        <button type="button" class="btn-toggle-rows" id="btnToggleRows" onclick="toggleRowsPengeluaran()">
-          ⬇️ Tampilkan Semua (<?= count($detailPengeluaran) - 5 ?> lagi)
-        </button>
-      <?php endif; ?>
-      <?php endif; ?>
   </div>
-
+  <?php if (count($detailPengeluaran) > 5): ?>
+    <button type="button" class="btn-toggle-rows" id="btnToggleRows" onclick="toggleRowsPengeluaran()">
+      ⬇️ Tampilkan Semua (<?= count($detailPengeluaran) - 5 ?> lagi)
+    </button>
+  <?php endif; ?>
+  <?php endif; ?>
 </div>
 
 <!-- ── Top Pelanggan ── -->
@@ -487,11 +486,11 @@ $exportTransaksi = array_map(fn($r) => [
     'status'         => $r['status'],
 ], $dataExport);
 
+// ── Data export CSV Pengeluaran: sekarang direkap per tanggal ──
 $exportPengeluaran = array_map(fn($p) => [
-    'tanggal'    => $p['tanggal'],
-    'keterangan' => $p['keterangan'],
-    'jumlah'     => $p['jumlah'],
-    'catatan'    => $p['catatan'] ?? '',
+    'tanggal' => $p['tanggal'],
+    'jumlah'  => $p['total_hari'],
+    'catatan' => $p['jml_item'] . ' item',
 ], $detailPengeluaran);
 ?>
 
