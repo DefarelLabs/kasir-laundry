@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Kasir — Permana Laundry</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="icon" href="assets/logo/logo.png"/>
   <style>
     :root{
       --blue-dark:#0f2a4a;--blue-mid:#1565c0;--blue-light:#e3f0ff;
