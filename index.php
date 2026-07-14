@@ -404,7 +404,19 @@ function fRp(n) {
 // ── Keranjang layanan (state sementara di client) ───────────────
 let keranjang = [];
 
+let totalKeseluruhan = 0;
 
+function updateSisaBayar() {
+  const depositInput = document.getElementById('deposit');
+  let deposit = parseFloat(depositInput.value) || 0;
+
+  if (deposit < 0) deposit = 0;
+  // Jangan biarkan deposit melebihi total (opsional, tapi mencegah minus di UI)
+  if (deposit > totalKeseluruhan) deposit = totalKeseluruhan;
+
+  const sisa = totalKeseluruhan - deposit;
+  document.getElementById('sisaBayarView').value = fRp(sisa);
+}
 
 // Sesuaikan step/label input jumlah sesuai tipe layanan terpilih
 document.getElementById('layanan_id').addEventListener('change', function () {
