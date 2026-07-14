@@ -590,6 +590,21 @@ function renderNota(array $d, int $copyNum, int $totalCopy): void {
       <hr class="r-div"/>
 
       <div class="r-total"><span>TOTAL</span><span><?= rupiah($d['total_harga']) ?></span></div>
+      
+      <?php if ((float)$d['deposit'] > 0): ?>
+      <div class="r-row" style="margin-top:6px">
+        <span class="r-key">Deposit / Dibayar</span>
+        <span class="r-val"><?= rupiah($d['deposit']) ?></span>
+      </div>
+      <div class="r-row" style="font-weight:700;margin-top:2px">
+        <span class="r-key" style="color:<?= $d['sisa_bayar'] > 0 ? '#c62828' : '#00897b' ?>">
+          <?= $d['sisa_bayar'] > 0 ? 'Sisa Tagihan' : 'Status' ?>
+        </span>
+        <span class="r-val" style="color:<?= $d['sisa_bayar'] > 0 ? '#c62828' : '#00897b' ?>">
+          <?= $d['sisa_bayar'] > 0 ? rupiah($d['sisa_bayar']) : 'LUNAS' ?>
+        </span>
+      </div>
+      <?php endif; ?>
 
       <hr class="r-div"/>
 
