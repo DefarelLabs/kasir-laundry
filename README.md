@@ -79,8 +79,10 @@ kasir-laundry/
 ├── assets/
 │   ├── css/
 │   │   └── style.css           ← Semua stylesheet global admin panel (termasuk modal)
-│   └── js/
-│       └── script.js           ← Semua JavaScript global (sidebar, CSV export)
+│   ├── js/
+│   │   └── script.js           ← Semua JavaScript global (sidebar, CSV export)
+│   └── logo/
+│       └── logo.png            ← Foto Icon Website
 │
 ├── includes/
 │   ├── config.php              ← DB connection, session, helper functions
