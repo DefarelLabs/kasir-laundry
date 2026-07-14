@@ -34,6 +34,7 @@ if (!defined('BASE_URL_ASSETS')) {
 
   <!-- ✅ External stylesheet (ekstrak dari <style> yang dulu inline) -->
   <link rel="stylesheet" href="<?= BASE_URL_ASSETS ?>/css/style.css"/>
+  <link rel="icon" href="../assets/logo/logo.png"/>
 </head>
 <body>
 
