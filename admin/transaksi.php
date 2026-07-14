@@ -300,6 +300,11 @@ require_once '../includes/admin_header.php';
         <option value="selesai"  <?= $filterStatus==='selesai'?'selected':'' ?>>Selesai</option>
         <option value="diambil"  <?= $filterStatus==='diambil'?'selected':'' ?>>Diambil</option>
       </select>
+      <select name="bayar" style="width:auto">
+        <option value="">— Semua Pembayaran —</option>
+        <option value="lunas" <?= $filterBayar==='lunas'?'selected':'' ?>>✅ Lunas</option>
+        <option value="belum" <?= $filterBayar==='belum'?'selected':'' ?>>⚠️ Belum Lunas</option>
+      </select>
       <input type="text" name="q" placeholder="🔍 Cari nama / nota…" value="<?= htmlspecialchars($search) ?>" style="width:200px"/>
       <button type="submit" class="btn btn-primary" style="padding:9px 16px">Cari</button>
       <a href="transaksi.php" class="btn btn-outline" style="padding:9px 16px">Reset</a>
