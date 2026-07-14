@@ -304,6 +304,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <textarea id="catatan" name="catatan" rows="2"
                     placeholder="cth: Jangan kena pemutih, ada karpet kecil…"><?= htmlspecialchars($_POST['catatan'] ?? '') ?></textarea>
         </div>
+        <div class="form-group" style="flex-direction:row;gap:10px">
+          <div style="flex:1">
+            <label for="deposit">Deposit / Uang Muka <span style="color:var(--gray-400);font-weight:400">(opsional)</span></label>
+            <input type="number" id="deposit" name="deposit" min="0" step="1"
+                  placeholder="cth: 20000" oninput="updateSisaBayar()"/>
+          </div>
+          <div style="flex:1">
+            <label for="sisaBayarView">Sisa Bayar</label>
+            <input type="text" id="sisaBayarView" readonly value="Rp 0"
+                  style="background:var(--gray-100);font-weight:700;color:var(--blue-mid)"/>
+          </div>
+        </div>
 
         <input type="hidden" name="keranjang_json" id="keranjangJsonInput" value="[]"/>
         <button type="submit" class="btn btn-primary" id="btnSubmit" disabled>💾 Simpan &amp; Buat Nota</button>
@@ -391,6 +403,8 @@ function fRp(n) {
 
 // ── Keranjang layanan (state sementara di client) ───────────────
 let keranjang = [];
+
+
 
 // Sesuaikan step/label input jumlah sesuai tipe layanan terpilih
 document.getElementById('layanan_id').addEventListener('change', function () {
