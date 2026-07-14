@@ -330,7 +330,17 @@ require_once '../includes/admin_header.php';
     <div class="stat-icon purple">🔢</div>
     <div><div class="stat-label">Total Satuan</div><div class="stat-value"><?= number_format($totals['satuan'],0) ?> pcs</div></div>
   </div>
-</div>
+  <div class="stat-card" style="border:2px solid <?= $totals['total_piutang'] > 0 ? 'var(--red)' : 'var(--green)' ?>">
+    <div class="stat-icon <?= $totals['total_piutang'] > 0 ? 'red' : 'green' ?>"><?= $totals['total_piutang'] > 0 ? '⚠️' : '✅' ?></div>
+      <div>
+        <div class="stat-label">Total Piutang</div>
+        <div class="stat-value" style="font-size:15px;color:<?= $totals['total_piutang'] > 0 ? 'var(--red)' : 'var(--green)' ?>">
+          <?= rupiah($totals['total_piutang']) ?>
+        </div>
+        <div class="stat-sub">Deposit terkumpul: <?= rupiah($totals['total_deposit']) ?></div>
+      </div>
+    </div>
+  </div>
 
 <!-- Tabel -->
 <div class="card">
@@ -345,8 +355,8 @@ require_once '../includes/admin_header.php';
       <thead>
         <tr>
           <th>#</th><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th>
-          <th>Berat/Pcs</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th>
-          <th>Status</th><th>Aksi</th>
+          <th>Berat/Pcs</th><th>Total</th><th>Deposit</th><th>Sisa Bayar</th>
+          <th>Tgl Masuk</th><th>Tgl Selesai</th><th>Status</th><th>Aksi</th>
         </tr>
       </thead>
       <tbody>
@@ -367,6 +377,14 @@ require_once '../includes/admin_header.php';
             <?php endforeach; ?>
           </td>
           <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
+          <td><?= $t['deposit'] > 0 ? rupiah($t['deposit']) : '<span style="color:var(--gray-400)">—</span>' ?></td>
+          <td>
+            <?php if ($t['sisa_bayar'] <= 0): ?>
+              <span class="badge selesai">✅ Lunas</span>
+            <?php else: ?>
+              <span class="badge pending" title="Sisa tagihan"><?= rupiah($t['sisa_bayar']) ?></span>
+            <?php endif; ?>
+          </td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_masuk']) ?></td>
           <td style="font-size:12px;white-space:nowrap"><?= tglIndo($t['tanggal_selesai']) ?></td>
           <td>
@@ -384,7 +402,8 @@ require_once '../includes/admin_header.php';
               title="Cetak 1">🖨️×1</a>
             <a href="../print_nota.php?id=<?= $t['id'] ?>&copy=2" target="_blank" class="btn btn-success btn-sm"
               title="Cetak 2">🖨️×2</a>
-            <button type="button" class="btn btn-warning btn-sm" title="Edit Transaksi" onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>', <?= htmlspecialchars(json_encode($items), ENT_QUOTES) ?>)">✏️</button>
+            <button type="button" class="btn btn-warning btn-sm" title="Edit Transaksi"
+              onclick="openEditModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>', '<?= htmlspecialchars($t['catatan'] ?? '', ENT_QUOTES) ?>', <?= htmlspecialchars(json_encode($items), ENT_QUOTES) ?>, <?= (float)$t['deposit'] ?>)">✏️</button>
             <a href="?hapus=<?= $t['id'] ?>" class="btn btn-danger btn-sm" title="Hapus"
               onclick="return confirm('Hapus transaksi <?= htmlspecialchars($t['no_nota'], ENT_QUOTES) ?> milik <?= htmlspecialchars($t['nama_pelanggan'], ENT_QUOTES) ?>?\nData tidak bisa dikembalikan!')">🗑️</a>
           </td>
@@ -395,6 +414,8 @@ require_once '../includes/admin_header.php';
         <tr style="background:var(--blue-light)">
           <td colspan="5" style="font-weight:700;padding:10px 12px">TOTAL</td>
           <td style="font-weight:800;color:var(--blue-mid)"><?= rupiah(array_sum(array_column($rows,'total_harga'))) ?></td>
+          <td style="font-weight:800;color:var(--teal)"><?= rupiah($totals['total_deposit']) ?></td>
+          <td style="font-weight:800;color:<?= $totals['total_piutang']>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totals['total_piutang']) ?></td>
           <td colspan="4"></td>
         </tr>
       </tfoot>
@@ -426,6 +447,12 @@ require_once '../includes/admin_header.php';
         <textarea name="catatan" id="edit_catatan" rows="2"></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="lbl">Deposit / Uang Muka</label>
+        <input type="number" name="deposit" id="edit_deposit" min="0" step="1"
+              placeholder="cth: 20000" oninput="renderKeranjangEdit()"/>
+      </div>
+
       <hr class="r-div" style="border-top:1px dashed var(--gray-200);margin:14px 0"/>
 
       <label class="lbl">Layanan dalam Nota</label>
@@ -445,7 +472,10 @@ require_once '../includes/admin_header.php';
         <button type="button" class="btn btn-teal btn-sm" onclick="tambahKeKeranjangEdit()">➕</button>
       </div>
 
-      <div style="text-align:right;margin-top:10px;font-weight:700;font-size:15px" id="edit_total_text">Total: Rp 0</div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:14px">
+        <span style="font-weight:700">Total: <span id="edit_total_text_val">Rp 0</span></span>
+        <span style="font-weight:700;color:var(--blue-mid)">Sisa Bayar: <span id="edit_sisa_text">Rp 0</span></span>
+      </div>
 
       <div style="display:flex;gap:8px;margin-top:14px">
         <button type="submit" class="btn btn-primary" style="flex:1" id="btnSimpanEdit">💾 Simpan Perubahan</button>
@@ -465,12 +495,12 @@ const layananDataEdit = {
 
 let keranjangEdit = []; // isi: {layanan_id, nama, tipe, jumlah, harga, subtotal}
 
-function openEditModal(id, nama, catatan, itemsExisting) {
+function openEditModal(id, nama, catatan, itemsExisting, depositExisting) {
   document.getElementById('edit_id').value = id;
   document.getElementById('edit_nama').value = nama;
   document.getElementById('edit_catatan').value = catatan;
+  document.getElementById('edit_deposit').value = depositExisting || '';
 
-  // Prefill keranjang edit dari transaksi_detail yang sudah ada
   keranjangEdit = (itemsExisting || []).map(it => ({
     layanan_id: it.layanan_id,
     nama: it.nama_layanan,
@@ -518,12 +548,14 @@ function hapusDariKeranjangEdit(idx) {
 
 function renderKeranjangEdit() {
   const wrap = document.getElementById('editKeranjangList');
-  const totEl = document.getElementById('edit_total_text');
+  const totValEl = document.getElementById('edit_total_text_val');
+  const sisaEl = document.getElementById('edit_sisa_text');
   const btnSimpan = document.getElementById('btnSimpanEdit');
 
   if (keranjangEdit.length === 0) {
     wrap.innerHTML = '<p style="color:var(--gray-400);font-size:13px;text-align:center;padding:6px 0">Belum ada layanan</p>';
-    totEl.textContent = 'Total: Rp 0';
+    totValEl.textContent = 'Rp 0';
+    sisaEl.textContent = 'Rp 0';
     btnSimpan.disabled = true;
     document.getElementById('edit_keranjang_json').value = '[]';
     return;
@@ -547,8 +579,13 @@ function renderKeranjangEdit() {
   });
 
   wrap.innerHTML = html;
-  totEl.textContent = 'Total: Rp ' + total.toLocaleString('id-ID');
+  totValEl.textContent = 'Rp ' + total.toLocaleString('id-ID');
   btnSimpan.disabled = false;
+
+  let deposit = parseFloat(document.getElementById('edit_deposit').value) || 0;
+  if (deposit < 0) deposit = 0;
+  if (deposit > total) deposit = total;
+  sisaEl.textContent = 'Rp ' + (total - deposit).toLocaleString('id-ID');
 
   document.getElementById('edit_keranjang_json').value = JSON.stringify(
     keranjangEdit.map(it => ({ layanan_id: it.layanan_id, jumlah: it.jumlah }))
