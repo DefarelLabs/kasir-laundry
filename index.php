@@ -477,6 +477,8 @@ function renderKeranjang() {
     brkEl.textContent = 'Tambahkan layanan ke keranjang';
     btnSubmit.disabled = true;
     document.getElementById('keranjangJsonInput').value = '[]';
+    totalKeseluruhan = 0;
+    updateSisaBayar();
     return;
   }
 
@@ -505,6 +507,9 @@ function renderKeranjang() {
   document.getElementById('keranjangJsonInput').value = JSON.stringify(
     keranjang.map(it => ({ layanan_id: it.layanan_id, jumlah: it.jumlah }))
   );
+
+  totalKeseluruhan = total;      // ← tambahan
+  updateSisaBayar();             // ← tambahan
 }
 renderKeranjang(); // set state awal (keranjang kosong)
 
@@ -514,6 +519,7 @@ document.getElementById('kasirForm').addEventListener('submit', function (e) {
     alert('Tambahkan minimal 1 layanan ke keranjang sebelum menyimpan!');
   }
 });
+
 
 // ── Fungsi cetak nota ──────────────────────────────────────────
 // copy = 1: satu lembar (untuk pelanggan)
