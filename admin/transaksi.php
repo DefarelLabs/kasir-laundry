@@ -140,6 +140,7 @@ $filterBulan  = $_GET['bulan']  ?? date('Y-m');
 $filterTgl    = $_GET['tgl']    ?? date('Y-m-d');
 $filterStatus = $_GET['status'] ?? '';
 $search       = trim($_GET['q'] ?? '');
+$filterBayar  = $_GET['bayar'] ?? ''; // '', 'lunas', 'belum'
 
 $where  = [];
 $params = [];
@@ -155,6 +156,11 @@ if ($filterStatus) { $where[] = "status = :status"; $params[':status'] = $filter
 if ($search) {
     $where[] = "(nama_pelanggan LIKE :q OR no_nota LIKE :q2)";
     $params[':q'] = "%$search%"; $params[':q2'] = "%$search%";
+}
+if ($filterBayar === 'lunas') {
+    $where[] = "sisa_bayar <= 0";
+} elseif ($filterBayar === 'belum') {
+    $where[] = "sisa_bayar > 0";
 }
 
 $whereSQL = implode(' AND ', $where);
@@ -179,7 +185,9 @@ if ($idsFiltered) {
 // ── Total ringkasan (order, pendapatan, berat, satuan) ────────────
 if ($filterMode === 'tanggal') {
     $stmtTot = $db->prepare("
-        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
+               COALESCE(SUM(deposit),0) AS total_deposit,
+               COALESCE(SUM(sisa_bayar),0) AS total_piutang
         FROM transaksi WHERE DATE(tanggal_masuk)=?
     ");
     $stmtTot->execute([$filterTgl]);
@@ -194,7 +202,9 @@ if ($filterMode === 'tanggal') {
     $stmtTotBerat->execute([$filterTgl]);
 } else {
     $stmtTot = $db->prepare("
-        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total
+        SELECT COUNT(*) AS jml, COALESCE(SUM(total_harga),0) AS total,
+               COALESCE(SUM(deposit),0) AS total_deposit,
+               COALESCE(SUM(sisa_bayar),0) AS total_piutang
         FROM transaksi WHERE DATE_FORMAT(tanggal_masuk,'%Y-%m')=?
     ");
     $stmtTot->execute([$filterBulan]);
