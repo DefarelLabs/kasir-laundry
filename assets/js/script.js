@@ -171,19 +171,19 @@ function exportCSV() {
   }
 
   var d    = window.laporanData;
-  var rows = [
-    ['Laporan Kasir Permana Laundry'],
-    ['Periode: ' + (d.periodeLabel || '')],
-    ['Dicetak: ' + new Date().toLocaleString('id-ID')],
-    [],
-    ['=== TRANSAKSI ==='],
-    ['No. Nota', 'Pelanggan', 'Layanan', 'Jumlah', 'Satuan', 'Harga/Unit', 'Total', 'Tgl Masuk', 'Status']
-  ];
+  rows.push(
+  ['Laporan Kasir Permana Laundry'],
+  ['Periode: ' + (d.periodeLabel || '')],
+  ['Dicetak: ' + new Date().toLocaleString('id-ID')],
+  [],
+  ['=== TRANSAKSI ==='],
+  ['No. Nota', 'Pelanggan', 'Layanan', 'Jumlah', 'Satuan', 'Harga/Unit', 'Total', 'Deposit', 'Sisa Bayar', 'Tgl Masuk', 'Status']
+);
 
-  (d.transaksi || []).forEach(function (r) {
-    rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.jumlah, r.satuan,
-               r.harga_per_unit, r.total_harga, r.tanggal_masuk, r.status]);
-  });
+(d.transaksi || []).forEach(function (r) {
+  rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.jumlah, r.satuan,
+             r.harga_per_unit, r.total_harga, r.deposit, r.sisa_bayar, r.tanggal_masuk, r.status]);
+});
 
   rows.push([], ['=== PENGELUARAN ==='],
     ['Tanggal', 'Keterangan', 'Jumlah', 'Catatan']);
@@ -193,13 +193,15 @@ function exportCSV() {
   });
 
   rows.push(
-    [],
-    ['=== RINGKASAN ==='],
-    ['Pendapatan Kotor',  d.totalPendapatan  || 0],
-    ['Total Pengeluaran', d.totalPengeluaran || 0],
-    ['Laba Bersih',       d.labaBersih       || 0],
-    ['Pendapatan (Status Diambil)', d.pendapatanDiambil || 0]
-  );
+  [],
+  ['=== RINGKASAN ==='],
+  ['Pendapatan Kotor',  d.totalPendapatan  || 0],
+  ['Total Deposit Diterima', d.totalDeposit || 0],
+  ['Total Piutang Belum Lunas', d.totalPiutang || 0],
+  ['Total Pengeluaran', d.totalPengeluaran || 0],
+  ['Laba Bersih',       d.labaBersih       || 0],
+  ['Pendapatan (Status Diambil)', d.pendapatanDiambil || 0]
+);
 
   var csv = rows.map(function (row) {
     return row.map(function (cell) {
