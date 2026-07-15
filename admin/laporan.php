@@ -56,6 +56,8 @@ $stmtRingkas = $db->prepare("
     SELECT
         COUNT(*)                              AS jml_order,
         COALESCE(SUM(total_harga), 0)         AS total_pendapatan,
+        COALESCE(SUM(deposit), 0)             AS total_deposit,
+        COALESCE(SUM(sisa_bayar), 0)          AS total_piutang,
         SUM(status='diambil')                 AS sudah_diambil,
         COALESCE(SUM(CASE WHEN status='diambil' THEN total_harga ELSE 0 END), 0) AS pendapatan_diambil
     FROM transaksi
@@ -92,6 +94,8 @@ $totalPendapatan   = (float)$ringkas['total_pendapatan'];
 $pendapatanDiambil = (float)$ringkas['pendapatan_diambil'];
 $totalPengeluaran  = (float)$dataPengeluaran['total_pengeluaran'];
 $labaBersih        = $pendapatanDiambil - $totalPengeluaran;
+$totalDeposit = (float)$ringkas['total_deposit'];
+$totalPiutang = (float)$ringkas['total_piutang'];
 
 // ── QUERY: Rekap per hari (order & pendapatan dari header) ────
 $stmtHarianTx = $db->prepare("
