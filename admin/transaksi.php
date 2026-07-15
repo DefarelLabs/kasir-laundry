@@ -68,6 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_tr
         exit;
     }
 
+    // ── Hitung ulang deposit & sisa bayar (server-side) ──
+    $deposit = (float)($_POST['deposit'] ?? 0);
+    if ($deposit < 0) $deposit = 0;
+    if ($deposit > $totalHarga) $deposit = $totalHarga;
+    $sisaBayar = $totalHarga - $deposit;
+
     try {
         $db->beginTransaction();
 
