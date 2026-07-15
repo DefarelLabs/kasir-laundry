@@ -89,10 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aksi'] ?? '') === 'edit_tr
 
         // 1) Update header
         $db->prepare("
-            UPDATE transaksi
-            SET nama_pelanggan=?, catatan=?, total_harga=?, tanggal_selesai=?
-            WHERE id=?
-        ")->execute([$nama, $catatan ?: null, $totalHarga, $tglSelesai->format('Y-m-d H:i:s'), $id]);
+        UPDATE transaksi
+        SET nama_pelanggan=?, catatan=?, total_harga=?, deposit=?, sisa_bayar=?, tanggal_selesai=?
+        WHERE id=?
+        ")->execute([$nama, $catatan ?: null, $totalHarga, $deposit, $sisaBayar, $tglSelesai->format('Y-m-d H:i:s'), $id]);
 
         // 2) Hapus semua detail lama, insert detail baru
         $db->prepare("DELETE FROM transaksi_detail WHERE transaksi_id=?")->execute([$id]);
