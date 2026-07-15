@@ -562,6 +562,8 @@ window.laporanData = <?= json_encode([
     'preset'            => $preset,
     'tanggalCetak'      => date('Ymd'),
     'totalPendapatan'   => (float)$ringkas['total_pendapatan'],
+    'totalDeposit'      => $totalDeposit,      // ← tambahan
+    'totalPiutang'      => $totalPiutang,      // ← tambahan
     'pendapatanDiambil' => $pendapatanDiambil,
     'totalPengeluaran'  => (float)$dataPengeluaran['total_pengeluaran'],
     'labaBersih'        => $labaBersih,
