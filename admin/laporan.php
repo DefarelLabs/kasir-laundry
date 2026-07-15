@@ -298,22 +298,6 @@ require_once '../includes/admin_header.php';
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon teal">💵</div>
-    <div>
-      <div class="stat-label">Deposit Diterima</div>
-      <div class="stat-value" style="color:var(--blue-mid)"><?= rupiah($totalDeposit) ?></div>
-      <div class="stat-sub">Uang muka terkumpul</div>
-    </div>
-  </div>
-  <div class="stat-card" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>;border:2px solid <?= $totalPiutang>0?'var(--red)':'var(--green)' ?>">
-    <div class="stat-icon <?= $totalPiutang >= 0 ? 'green' : 'red' ?>"><?= $totalPiutang>0?'⚠️':'✅' ?></div>
-    <div>
-      <div class="stat-label">Piutang Belum Lunas</div>
-      <div style="font-size:19px;font-weight:800;color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Sisa tagihan pelanggan</div>
-    </div>
-  </div>
-  <div class="stat-card">
     <div class="stat-icon red">💸</div>
     <div>
       <div class="stat-label">Total Pengeluaran</div>
@@ -341,6 +325,16 @@ require_once '../includes/admin_header.php';
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💰 Pendapatan Kotor</div>
       <div style="font-size:19px;font-weight:800;color:var(--teal)"><?= rupiah($totalPendapatan) ?></div>
       <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $ringkas['jml_order'] ?> transaksi · <?= number_format($ringkas['total_berat'],1) ?> kg · <?= number_format($ringkas['total_satuan'],0) ?> pcs</div>
+    </div>
+    <div class="keuangan-cell">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💵 Deposit Diterima</div>
+      <div style="font-size:19px;font-weight:800;color:var(--blue-mid)"><?= rupiah($totalDeposit) ?></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Uang muka terkumpul</div>
+    </div>
+    <div class="keuangan-cell" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>">
+      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $totalPiutang>0?'⚠️':'✅' ?> Piutang Belum Lunas</div>
+      <div style="font-size:19px;font-weight:800;color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Sisa tagihan pelanggan</div>
     </div>
     <div class="keuangan-cell">
       <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💸 Total Pengeluaran</div>
