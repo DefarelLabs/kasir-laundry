@@ -186,7 +186,7 @@ require_once '../includes/admin_header.php';
 <style>
 /* Responsive laporan */
 .laporan-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
-.keuangan-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
+.keuangan-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
 .keuangan-cell{padding:16px 18px}
 .keuangan-cell+.keuangan-cell{border-left:1.5px solid var(--gray-200)}
 .preset-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -295,6 +295,22 @@ require_once '../includes/admin_header.php';
       <div class="stat-label">Pendapatan Kotor</div>
       <div class="stat-value" style="font-size:15px"><?= rupiah($totalPendapatan) ?></div>
       <div class="stat-sub">dari transaksi</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon teal">💵</div>
+    <div>
+      <div class="stat-label">Deposit Diterima</div>
+      <div class="stat-value" style="color:var(--blue-mid)"><?= rupiah($totalDeposit) ?></div>
+      <div class="stat-sub">Uang muka terkumpul</div>
+    </div>
+  </div>
+  <div class="stat-card" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>">
+    <div class="stat-icon <?= $totalPiutang >= 0 ? 'green' : 'red' ?>"><?= $totalPiutang>0?'⚠️':'✅' ?></div>
+    <div>
+      <div class="stat-label">Piutang Belum Lunas</div>
+      <div style="font-size:19px;font-weight:800;color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Sisa tagihan pelanggan</div>
     </div>
   </div>
   <div class="stat-card">
