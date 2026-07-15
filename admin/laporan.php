@@ -180,6 +180,7 @@ $daftarPiutang = $stmtPiutang->fetchAll();
 $stmtExport = $db->prepare("
     SELECT t.no_nota, t.nama_pelanggan, d.nama_layanan AS layanan,
            d.jumlah, d.tipe_hitungan, d.harga_per_unit, d.subtotal,
+           t.deposit, t.sisa_bayar,
            t.tanggal_masuk, t.status
     FROM transaksi_detail d
     JOIN transaksi t ON t.id = d.transaksi_id
@@ -541,6 +542,8 @@ $exportTransaksi = array_map(fn($r) => [
     'satuan'         => $r['tipe_hitungan'] === 'satuan' ? 'pcs' : 'kg',
     'harga_per_unit' => $r['harga_per_unit'],
     'total_harga'    => $r['subtotal'],
+    'deposit'        => $r['deposit'],
+    'sisa_bayar'     => $r['sisa_bayar'],
     'tanggal_masuk'  => date('d/m/Y H:i', strtotime($r['tanggal_masuk'])),
     'status'         => $r['status'],
 ], $dataExport);
