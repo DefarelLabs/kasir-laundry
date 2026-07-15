@@ -305,7 +305,7 @@ require_once '../includes/admin_header.php';
       <div class="stat-sub">Uang muka terkumpul</div>
     </div>
   </div>
-  <div class="stat-card" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>">
+  <div class="stat-card" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>;border:2px solid <?= $totalPiutang>0?'var(--red)':'var(--green)' ?>">
     <div class="stat-icon <?= $totalPiutang >= 0 ? 'green' : 'red' ?>"><?= $totalPiutang>0?'⚠️':'✅' ?></div>
     <div>
       <div class="stat-label">Piutang Belum Lunas</div>
