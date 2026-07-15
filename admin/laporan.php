@@ -164,6 +164,16 @@ $stmtTop = $db->prepare("
 $stmtTop->execute([$tglMulai, $tglAkhir]);
 $topPelanggan = $stmtTop->fetchAll();
 
+// ── QUERY: Daftar transaksi yang masih ada sisa tagihan ────────
+$stmtPiutang = $db->prepare("
+    SELECT no_nota, nama_pelanggan, total_harga, deposit, sisa_bayar, tanggal_masuk, status
+    FROM transaksi
+    WHERE DATE(tanggal_masuk) BETWEEN ? AND ? AND sisa_bayar > 0
+    ORDER BY tanggal_masuk DESC
+");
+$stmtPiutang->execute([$tglMulai, $tglAkhir]);
+$daftarPiutang = $stmtPiutang->fetchAll();
+
 // ── QUERY: Semua ITEM (bukan header) untuk export CSV ───────────
 // 1 baris CSV = 1 layanan (bukan 1 nota), supaya subtotal per
 // layanan tetap akurat walau 1 nota berisi banyak layanan.
