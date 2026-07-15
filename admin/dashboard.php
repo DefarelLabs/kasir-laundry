@@ -11,6 +11,8 @@ $stmtHari = $db->prepare("
     SELECT
         COUNT(*) AS jumlah_order,
         COALESCE(SUM(total_harga),0) AS total_pendapatan,
+        COALESCE(SUM(deposit),0) AS total_deposit,
+        COALESCE(SUM(sisa_bayar),0) AS total_piutang,
         SUM(status='pending') AS pending,
         SUM(status='selesai') AS selesai,
         SUM(status='diambil') AS diambil
@@ -89,6 +91,14 @@ require_once '../includes/admin_header.php';
   <div class="stat-card"><div class="stat-icon orange">⚖️</div><div><div class="stat-label">Total Berat</div><div class="stat-value"><?= number_format($statHari['total_berat'],1) ?> kg</div><div class="stat-sub"><?= $filterTglFormatted ?></div></div></div>
   <div class="stat-card"><div class="stat-icon purple">🔢</div><div><div class="stat-label">Total Satuan</div><div class="stat-value"><?= number_format($statHari['total_satuan'],0) ?> pcs</div><div class="stat-sub"><?= $filterTglFormatted ?></div></div></div>
   <div class="stat-card"><div class="stat-icon green">📅</div><div><div class="stat-label">Order Bulan Ini</div><div class="stat-value"><?= $statBulan['jml'] ?></div><div class="stat-sub"><?= rupiah($statBulan['total']) ?></div></div></div>
+  <div class="stat-card" style="border:2px solid <?= $statHari['total_piutang']>0?'var(--red)':'var(--green)' ?>">
+  <div class="stat-icon <?= $statHari['total_piutang']>0?'red':'green' ?>"><?= $statHari['total_piutang']>0?'⚠️':'✅' ?></div>
+    <div>
+      <div class="stat-label">Sisa Piutang</div>
+      <div class="stat-value" style="font-size:15px;color:<?= $statHari['total_piutang']>0?'var(--red)':'var(--green)' ?>"><?= rupiah($statHari['total_piutang']) ?></div>
+      <div class="stat-sub">Deposit masuk: <?= rupiah($statHari['total_deposit']) ?></div>
+    </div>
+  </div>
 </div>
 
 <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
@@ -104,7 +114,7 @@ require_once '../includes/admin_header.php';
   <?php else: ?>
     <div class="table-wrap dashboard-table-wrap">
       <table>
-        <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th><th>Berat/Pcs</th><th>Total</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Status</th><th>Aksi</th></tr></thead>
+        <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Layanan</th><th>Berat/Pcs</th><th>Total</th><th>Status Bayar</th><th>Tgl Masuk</th><th>Tgl Selesai</th><th>Status</th><th>Aksi</th></tr></thead>
         <tbody>
           <?php foreach ($transaksiHari as $t): ?>
           <?php $items = $detailByTransaksi[$t['id']] ?? []; ?>
@@ -122,6 +132,13 @@ require_once '../includes/admin_header.php';
               <?php endforeach; ?>
             </td>
             <td><strong><?= rupiah($t['total_harga']) ?></strong></td>
+            <td>
+              <?php if ($t['sisa_bayar'] <= 0): ?>
+                <span class="badge selesai">✅ Lunas</span>
+              <?php else: ?>
+                <span class="badge pending"><?= rupiah($t['sisa_bayar']) ?></span>
+              <?php endif; ?>
+            </td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_masuk']) ?></td>
             <td style="font-size:12px"><?= tglIndo($t['tanggal_selesai']) ?></td>
             <td><span class="badge <?= $t['status'] ?>"><?= ucfirst($t['status']) ?></span></td>
@@ -133,7 +150,7 @@ require_once '../includes/admin_header.php';
           <?php endforeach; ?>
         </tbody>
         <tfoot>
-          <tr><td colspan="4" style="font-weight:700;padding:10px 12px">TOTAL</td><td style="font-weight:800;color:var(--teal)"><?= rupiah($statHari['total_pendapatan']) ?></td><td colspan="4"></td></tr>
+          <tr><td colspan="4" style="font-weight:700;padding:10px 12px">TOTAL</td><td style="font-weight:800;color:var(--teal)"><?= rupiah($statHari['total_pendapatan']) ?></td><td colspan="5"></td></tr>
         </tfoot>
       </table>
     </div>
