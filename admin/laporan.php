@@ -472,6 +472,41 @@ require_once '../includes/admin_header.php';
   <?php endif; ?>
 </div>
 
+<!-- ── Daftar Piutang Belum Lunas ── -->
+<div class="card" style="margin-bottom:20px">
+  <div class="card-title">🧾 Daftar Piutang Belum Lunas — <?= $periodeLabel ?></div>
+  <?php if (empty($daftarPiutang)): ?>
+    <div style="text-align:center;padding:24px;color:var(--gray-400)">
+      <div style="font-size:28px;margin-bottom:8px">🎉</div>Semua transaksi pada periode ini sudah lunas.
+    </div>
+  <?php else: ?>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Total</th><th>Deposit</th><th>Sisa Tagihan</th><th>Tgl Masuk</th></tr></thead>
+      <tbody>
+        <?php foreach ($daftarPiutang as $p): ?>
+        <tr>
+          <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($p['no_nota']) ?></code></td>
+          <td><strong><?= htmlspecialchars($p['nama_pelanggan']) ?></strong></td>
+          <td><?= rupiah($p['total_harga']) ?></td>
+          <td><?= rupiah($p['deposit']) ?></td>
+          <td style="color:var(--red);font-weight:700"><?= rupiah($p['sisa_bayar']) ?></td>
+          <td style="font-size:12px"><?= tglIndo($p['tanggal_masuk']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--red-light);font-weight:700">
+          <td colspan="4" style="padding:10px 12px">TOTAL PIUTANG</td>
+          <td style="color:var(--red)"><?= rupiah(array_sum(array_column($daftarPiutang,'sisa_bayar'))) ?></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <?php endif; ?>
+</div>
+
 <!-- ── Top Pelanggan ── -->
 <div class="card">
   <div class="card-title">⭐ Top 5 Pelanggan</div>
