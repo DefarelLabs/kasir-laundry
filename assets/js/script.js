@@ -200,7 +200,7 @@ function exportCSV() {
   ['Total Piutang Belum Lunas', d.totalPiutang || 0],
   ['Total Pengeluaran', d.totalPengeluaran || 0],
   ['Laba Bersih',       d.labaBersih       || 0],
-  ['Pendapatan (Status Diambil)', d.pendapatanDiambil || 0]
+  ['Uang Diterima (Diambil penuh + Deposit pending)', d.uangDiterima || 0]
 );
 
   var csv = rows.map(function (row) {
