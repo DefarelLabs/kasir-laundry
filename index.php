@@ -84,7 +84,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $transaksiId = (int)$db->lastInsertId();
 
-                // ...INSERT transaksi_detail tetap sama seperti sebelumnya...
+                // ── INSERT semua item layanan ke transaksi_detail ──
+                $stmtD = $db->prepare("
+                    INSERT INTO transaksi_detail
+                        (transaksi_id, layanan_id, nama_layanan, label_durasi, tipe_hitungan, jumlah, harga_per_unit, subtotal)
+                    VALUES (?,?,?,?,?,?,?,?)
+                ");
+                foreach ($items as $it) {
+                    $stmtD->execute([
+                        $transaksiId, $it['layanan_id'], $it['nama_layanan'], $it['label_durasi'],
+                        $it['tipe_hitungan'], $it['jumlah'], $it['harga_per_unit'], $it['subtotal'],
+                    ]);
+                }
 
                 $db->commit();
 
