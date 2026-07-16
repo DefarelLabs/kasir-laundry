@@ -134,7 +134,15 @@ if (isset($_GET['update_status'])) {
     $id     = (int)$_GET['update_status'];
     $status = $_GET['status'] ?? '';
     if (in_array($status, ['pending','selesai','diambil'])) {
-        $db->prepare("UPDATE transaksi SET status=? WHERE id=?")->execute([$status, $id]);
+        if ($status === 'diambil') {
+            // Diambil = dianggap lunas → sisa tagihan otomatis nol
+            $db->prepare("UPDATE transaksi SET status=?, sisa_bayar=0 WHERE id=?")
+               ->execute([$status, $id]);
+        } else {
+            // Selain Diambil = sisa bayar dihitung ulang (total - deposit)
+            $db->prepare("UPDATE transaksi SET status=?, sisa_bayar = total_harga - deposit WHERE id=?")
+               ->execute([$status, $id]);
+        }
         setFlash('success', 'Status transaksi diperbarui.');
     }
     header('Location: transaksi.php');
