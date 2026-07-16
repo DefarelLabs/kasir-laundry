@@ -92,12 +92,12 @@ $stmtPengeluaran = $db->prepare("
 $stmtPengeluaran->execute([$tglMulai, $tglAkhir]);
 $dataPengeluaran = $stmtPengeluaran->fetch();
 
-$totalPendapatan   = (float)$ringkas['total_pendapatan'];
-$pendapatanDiambil = (float)$ringkas['pendapatan_diambil'];
-$totalPengeluaran  = (float)$dataPengeluaran['total_pengeluaran'];
-$labaBersih        = $pendapatanDiambil - $totalPengeluaran;
-$totalDeposit = (float)$ringkas['total_deposit'];
-$totalPiutang = (float)$ringkas['total_piutang'];
+$totalPendapatan  = (float)$ringkas['total_pendapatan'];
+$totalDeposit     = (float)$ringkas['total_deposit'];
+$totalPiutang     = (float)$ringkas['total_piutang'];
+$uangDiterima     = (float)$ringkas['uang_diterima'];   // ← ganti nama dari $pendapatanDiambil
+$totalPengeluaran = (float)$dataPengeluaran['total_pengeluaran'];
+$labaBersih       = $uangDiterima - $totalPengeluaran;
 
 // ── QUERY: Rekap per hari (order & pendapatan dari header) ────
 $stmtHarianTx = $db->prepare("
@@ -360,7 +360,7 @@ require_once '../includes/admin_header.php';
         <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
       </div>
       <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
-        Dari <?= (int)$ringkas['sudah_diambil'] ?> transaksi Diambil (<?= rupiah($pendapatanDiambil) ?>) − Pengeluaran
+        <?= (int)$ringkas['sudah_diambil'] ?> transaksi Diambil (dihitung penuh) + deposit dari transaksi lain − Pengeluaran
       </div>
     </div>
     <div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
