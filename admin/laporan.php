@@ -59,7 +59,9 @@ $stmtRingkas = $db->prepare("
         COALESCE(SUM(deposit), 0)             AS total_deposit,
         COALESCE(SUM(sisa_bayar), 0)          AS total_piutang,
         SUM(status='diambil')                 AS sudah_diambil,
-        COALESCE(SUM(CASE WHEN status='diambil' THEN total_harga ELSE 0 END), 0) AS pendapatan_diambil
+        COALESCE(SUM(
+            CASE WHEN status='diambil' THEN total_harga ELSE deposit END
+        ), 0) AS uang_diterima
     FROM transaksi
     WHERE DATE(tanggal_masuk) BETWEEN ? AND ?
 ");
