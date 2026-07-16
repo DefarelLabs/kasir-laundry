@@ -565,28 +565,38 @@ $exportTransaksi = array_map(fn($r) => [
     'status'         => $r['status'],
 ], $dataExport);
 
-// ── Data export CSV Pengeluaran: sekarang direkap per tanggal ──
 $exportPengeluaran = array_map(fn($p) => [
     'tanggal' => $p['tanggal'],
     'jumlah'  => $p['total_hari'],
     'catatan' => $p['jml_item'] . ' item',
 ], $detailPengeluaran);
-?>
 
-<script>
-window.laporanData = <?= json_encode([
+$laporanJson = json_encode([
     'periodeLabel'      => $periodeLabel,
     'preset'            => $preset,
     'tanggalCetak'      => date('Ymd'),
     'totalPendapatan'   => $totalPendapatan,
     'totalDeposit'      => $totalDeposit,
     'totalPiutang'      => $totalPiutang,
-    'uangDiterima'      => $uangDiterima,    
+    'uangDiterima'      => $uangDiterima,
     'totalPengeluaran'  => $totalPengeluaran,
     'labaBersih'        => $labaBersih,
     'transaksi'         => $exportTransaksi,
     'pengeluaran'       => $exportPengeluaran,
-], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE);
+
+// Kalau json_encode gagal (mis. karakter aneh di catatan), jangan biarkan
+// halaman menghasilkan JS rusak — pakai fallback null yang aman.
+if ($laporanJson === false) {
+    $laporanJson = 'null';
+}
+?>
+
+<script>
+window.laporanData = <?= $laporanJson ?>;
+if (!window.laporanData) {
+  console.error('Gagal memuat data laporan untuk export — cek karakter aneh di catatan/nama pelanggan.');
+}
 </script>
 
 <?php require_once '../includes/admin_footer.php'; ?>
