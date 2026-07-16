@@ -95,7 +95,7 @@ $dataPengeluaran = $stmtPengeluaran->fetch();
 $totalPendapatan  = (float)$ringkas['total_pendapatan'];
 $totalDeposit     = (float)$ringkas['total_deposit'];
 $totalPiutang     = (float)$ringkas['total_piutang'];
-$uangDiterima     = (float)$ringkas['uang_diterima'];   // ← ganti nama dari $pendapatanDiambil
+$uangDiterima     = (float)$ringkas['uang_diterima'];
 $totalPengeluaran = (float)$dataPengeluaran['total_pengeluaran'];
 $labaBersih       = $uangDiterima - $totalPengeluaran;
 
@@ -182,8 +182,7 @@ $daftarPiutang = $stmtPiutang->fetchAll();
 $stmtExport = $db->prepare("
     SELECT t.no_nota, t.nama_pelanggan, d.nama_layanan AS layanan,
            d.jumlah, d.tipe_hitungan, d.harga_per_unit, d.subtotal,
-           t.deposit, t.sisa_bayar,
-           t.tanggal_masuk, t.status
+           t.deposit, t.sisa_bayar, t.tanggal_masuk, t.status
     FROM transaksi_detail d
     JOIN transaksi t ON t.id = d.transaksi_id
     WHERE DATE(t.tanggal_masuk) BETWEEN ? AND ?
@@ -197,11 +196,13 @@ require_once '../includes/admin_header.php';
 ?>
 
 <style>
-/* Responsive laporan */
 .laporan-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
-.keuangan-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
-.keuangan-cell{padding:16px 18px}
+.keuangan-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden}
+.keuangan-cell{padding:16px 14px}
 .keuangan-cell+.keuangan-cell{border-left:1.5px solid var(--gray-200)}
+.keuangan-label{font-size:12px;color:var(--gray-600);margin-bottom:6px}
+.keuangan-value{font-size:17px;font-weight:800}
+.keuangan-sub{font-size:11px;color:var(--gray-400);margin-top:4px}
 .preset-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .preset-btn{padding:8px 14px;font-size:13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);background:var(--white);color:var(--gray-600);font-family:inherit;font-weight:600;cursor:pointer;text-decoration:none;transition:all .15s;display:inline-block;text-align:center}
 .preset-btn:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-mid)}
@@ -211,44 +212,59 @@ require_once '../includes/admin_header.php';
 #customRange form{flex-wrap:wrap}
 #customRange input[type=date]{width:100%;max-width:160px}
 
-/* ── Collapse Detail Pengeluaran ── */
 .row-collapsible.is-hidden { display: none; }
-.btn-toggle-rows {
-  display: block;
-  width: 100%;
-  text-align: center;
-  padding: 10px;
-  background: var(--gray-50);
-  border: 1px dashed var(--gray-200);
-  border-radius: 8px;
-  color: var(--blue-mid);
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-.btn-toggle-rows:hover { background: var(--blue-light); }
+.btn-toggle-rows{display:block;width:100%;text-align:center;padding:10px;background:var(--gray-50);border:1px dashed var(--gray-200);border-radius:8px;color:var(--blue-mid);font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
+.btn-toggle-rows:hover{background:var(--blue-light)}
 
 @media(max-width:768px){
   .laporan-grid-2{grid-template-columns:1fr}
-  .keuangan-grid{grid-template-columns:1fr}
-  .keuangan-cell+.keuangan-cell{border-left:none;border-top:1.5px solid var(--gray-200)}
+  .keuangan-grid{grid-template-columns:1fr 1fr}
+  .keuangan-cell{padding:12px 14px;border-left:none!important}
+  .keuangan-cell:nth-child(odd){border-right:1.5px solid var(--gray-200)}
+  .keuangan-cell:nth-child(n+3){border-top:1.5px solid var(--gray-200)}
+  .keuangan-value{font-size:14px!important}
   .preset-btn{font-size:11px;padding:6px 9px}
   .preset-btns{gap:5px}
-  .keuangan-cell{padding:12px 14px}
-  .keuangan-cell div[style*="font-size:19px"]{font-size:15px!important}
   #customRange form{gap:6px!important}
   #customRange input[type=date]{width:auto;flex:1;min-width:0}
   .export-btns{gap:6px}
   .export-btns .btn{font-size:11px!important;padding:6px 10px!important}
   .filter-card p{font-size:12px;word-break:break-word}
 }
+
+/* ══ PRINT / SAVE AS PDF ══ */
 @media print{
-  .sidebar,.topbar,.filter-card,.export-btns,.btn-hamburger{display:none!important}
+  html,body{font-size:11px!important}
+  .sidebar,.topbar,.filter-card,.export-btns,.btn-hamburger,.btn-toggle-rows{display:none!important}
   .main-wrap{margin-left:0!important}
-  .page-body{padding:8px!important}
-  .card{box-shadow:none!important;border:1px solid #ddd;margin-bottom:12px}
-  .laporan-grid-2{grid-template-columns:1fr 1fr}
+  .page-body{padding:6px!important}
+
+  .card{box-shadow:none!important;border:1px solid #ddd;margin-bottom:8px;padding:10px!important;page-break-inside:avoid}
+  .card-title{font-size:11px;margin-bottom:6px;padding-bottom:5px}
+
+  .laporan-grid-2{grid-template-columns:1fr 1fr;gap:8px}
+
+  .stats-grid{grid-template-columns:repeat(4,1fr)!important;gap:6px}
+  .stat-card{padding:6px;gap:6px;box-shadow:none;border:1px solid #eee}
+  .stat-icon{width:22px;height:22px;font-size:12px}
+  .stat-label{font-size:8.5px}
+  .stat-value{font-size:11px!important}
+  .stat-sub{font-size:7.5px}
+
+  .keuangan-grid{grid-template-columns:repeat(5,1fr)!important}
+  .keuangan-cell{padding:6px 6px}
+  .keuangan-label{font-size:8.5px}
+  .keuangan-value{font-size:11px!important}
+  .keuangan-sub{font-size:7px}
+
+  .table-wrap{overflow-x:visible!important}
+  table{min-width:0!important;width:100%!important;font-size:9px!important;table-layout:fixed}
+  th,td{padding:3px 4px!important;word-break:break-word}
+  .badge{font-size:7.5px!important;padding:1px 5px!important}
+
+  .row-collapsible.is-hidden{display:table-row!important}
+
+  @page{size:A4;margin:10mm}
 }
 </style>
 
@@ -328,6 +344,14 @@ require_once '../includes/admin_header.php';
       <div class="stat-sub"><?= $labaBersih >= 0 ? 'Untung' : 'Rugi' ?></div>
     </div>
   </div>
+  <div class="stat-card" style="border:2px solid <?= $totalPiutang>0?'var(--red)':'var(--green)' ?>">
+    <div class="stat-icon <?= $totalPiutang>0?'red':'green' ?>"><?= $totalPiutang>0?'⚠️':'✅' ?></div>
+    <div>
+      <div class="stat-label">Total Piutang</div>
+      <div class="stat-value" style="font-size:15px;color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
+      <div class="stat-sub">Deposit: <?= rupiah($totalDeposit) ?></div>
+    </div>
+  </div>
 </div>
 
 <!-- ── Ringkasan Keuangan ── -->
@@ -335,40 +359,31 @@ require_once '../includes/admin_header.php';
   <div class="card-title">💵 Ringkasan Keuangan — <?= $periodeLabel ?></div>
   <div class="keuangan-grid">
     <div class="keuangan-cell">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💰 Pendapatan Kotor</div>
-      <div style="font-size:19px;font-weight:800;color:var(--teal)"><?= rupiah($totalPendapatan) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $ringkas['jml_order'] ?> transaksi · <?= number_format($ringkas['total_berat'],1) ?> kg · <?= number_format($ringkas['total_satuan'],0) ?> pcs</div>
+      <div class="keuangan-label">💰 Pendapatan Kotor</div>
+      <div class="keuangan-value" style="color:var(--teal)"><?= rupiah($totalPendapatan) ?></div>
+      <div class="keuangan-sub"><?= $ringkas['jml_order'] ?> transaksi · <?= number_format($ringkas['total_berat'],1) ?> kg · <?= number_format($ringkas['total_satuan'],0) ?> pcs</div>
     </div>
     <div class="keuangan-cell">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💵 Deposit Diterima</div>
-      <div style="font-size:19px;font-weight:800;color:var(--blue-mid)"><?= rupiah($totalDeposit) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Uang muka terkumpul</div>
+      <div class="keuangan-label">💵 Deposit Diterima</div>
+      <div class="keuangan-value" style="color:var(--blue-mid)"><?= rupiah($totalDeposit) ?></div>
+      <div class="keuangan-sub">Uang muka terkumpul</div>
     </div>
     <div class="keuangan-cell" style="background:<?= $totalPiutang>0?'var(--red-light)':'var(--green-light)' ?>">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $totalPiutang>0?'⚠️':'✅' ?> Piutang Belum Lunas</div>
-      <div style="font-size:19px;font-weight:800;color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Sisa tagihan pelanggan</div>
+      <div class="keuangan-label"><?= $totalPiutang>0?'⚠️':'✅' ?> Piutang Belum Lunas</div>
+      <div class="keuangan-value" style="color:<?= $totalPiutang>0?'var(--red)':'var(--green)' ?>"><?= rupiah($totalPiutang) ?></div>
+      <div class="keuangan-sub">Sisa tagihan pelanggan</div>
     </div>
     <div class="keuangan-cell">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px">💸 Total Pengeluaran</div>
-      <div style="font-size:19px;font-weight:800;color:var(--red)"><?= rupiah($totalPengeluaran) ?></div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px"><?= $dataPengeluaran['jml_pengeluaran'] ?> item pengeluaran</div>
+      <div class="keuangan-label">💸 Total Pengeluaran</div>
+      <div class="keuangan-value" style="color:var(--red)"><?= rupiah($totalPengeluaran) ?></div>
+      <div class="keuangan-sub"><?= $dataPengeluaran['jml_pengeluaran'] ?> item pengeluaran</div>
     </div>
     <div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Pendapatan Bersih</div>
-      <div style="font-size:19px;font-weight:800;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
+      <div class="keuangan-label"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Laba Bersih</div>
+      <div class="keuangan-value" style="color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
         <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
       </div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">
-        <?= (int)$ringkas['sudah_diambil'] ?> transaksi Diambil (dihitung penuh) + deposit dari transaksi lain − Pengeluaran
-      </div>
-    </div>
-    <div class="keuangan-cell" style="background:<?= $labaBersih >= 0 ? 'var(--green-light)' : 'var(--red-light)' ?>">
-      <div style="font-size:12px;color:var(--gray-600);margin-bottom:6px"><?= $labaBersih >= 0 ? '✅' : '⚠️' ?> Laba Bersih</div>
-      <div style="font-size:19px;font-weight:800;color:<?= $labaBersih >= 0 ? 'var(--green)' : 'var(--red)' ?>">
-        <?= ($labaBersih < 0 ? '−' : '') . rupiah(abs($labaBersih)) ?>
-      </div>
-      <div style="font-size:11px;color:var(--gray-400);margin-top:4px">Pendapatan − Pengeluaran</div>
+      <div class="keuangan-sub">Diambil dihitung penuh + Deposit transaksi lain − Pengeluaran</div>
     </div>
   </div>
 </div>
