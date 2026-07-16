@@ -165,59 +165,64 @@ function toggleRowsPengeluaran() {
    Lihat contoh di laporan.php (bagian <script> data injection).
 ════════════════════════════════════════════════════════════ */
 function exportCSV() {
-  if (typeof window.laporanData === 'undefined') {
-    console.error('exportCSV: window.laporanData tidak ditemukan.');
+  if (!window.laporanData) {
+    alert('Data laporan gagal dimuat. Coba refresh halaman, lalu export ulang.');
+    console.error('exportCSV: window.laporanData tidak tersedia.');
     return;
   }
 
   var d    = window.laporanData;
-  rows.push(
-  ['Laporan Kasir Permana Laundry'],
-  ['Periode: ' + (d.periodeLabel || '')],
-  ['Dicetak: ' + new Date().toLocaleString('id-ID')],
-  [],
-  ['=== TRANSAKSI ==='],
-  ['No. Nota', 'Pelanggan', 'Layanan', 'Jumlah', 'Satuan', 'Harga/Unit', 'Total', 'Deposit', 'Sisa Bayar', 'Tgl Masuk', 'Status']
-);
+  var rows = [
+    ['Laporan Kasir Permana Laundry'],
+    ['Periode: ' + (d.periodeLabel || '')],
+    ['Dicetak: ' + new Date().toLocaleString('id-ID')],
+    [],
+    ['=== TRANSAKSI ==='],
+    ['No. Nota', 'Pelanggan', 'Layanan', 'Jumlah', 'Satuan', 'Harga/Unit', 'Total', 'Deposit', 'Sisa Bayar', 'Tgl Masuk', 'Status']
+  ];
 
-(d.transaksi || []).forEach(function (r) {
-  rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.jumlah, r.satuan,
-             r.harga_per_unit, r.total_harga, r.deposit, r.sisa_bayar, r.tanggal_masuk, r.status]);
-});
+  (d.transaksi || []).forEach(function (r) {
+    rows.push([r.no_nota, r.nama_pelanggan, r.layanan, r.jumlah, r.satuan,
+               r.harga_per_unit, r.total_harga, r.deposit, r.sisa_bayar, r.tanggal_masuk, r.status]);
+  });
 
   rows.push([], ['=== PENGELUARAN ==='],
     ['Tanggal', 'Keterangan', 'Jumlah', 'Catatan']);
 
   (d.pengeluaran || []).forEach(function (p) {
-  rows.push([p.tanggal, '', p.jumlah, p.catatan || '']); // kolom "Keterangan" dikosongkan karena sudah direkap per tanggal
+    rows.push([p.tanggal, '', p.jumlah, p.catatan || '']);
   });
 
   rows.push(
-  [],
-  ['=== RINGKASAN ==='],
-  ['Pendapatan Kotor',  d.totalPendapatan  || 0],
-  ['Total Deposit Diterima', d.totalDeposit || 0],
-  ['Total Piutang Belum Lunas', d.totalPiutang || 0],
-  ['Total Pengeluaran', d.totalPengeluaran || 0],
-  ['Laba Bersih',       d.labaBersih       || 0],
-  ['Uang Diterima (Diambil penuh + Deposit pending)', d.uangDiterima || 0]
-);
+    [],
+    ['=== RINGKASAN ==='],
+    ['Pendapatan Kotor',  d.totalPendapatan  || 0],
+    ['Total Deposit Diterima', d.totalDeposit || 0],
+    ['Total Piutang Belum Lunas', d.totalPiutang || 0],
+    ['Total Pengeluaran', d.totalPengeluaran || 0],
+    ['Laba Bersih',       d.labaBersih       || 0],
+    ['Uang Diterima (Diambil penuh + Deposit pending)', d.uangDiterima || 0]
+  );
 
-  var csv = rows.map(function (row) {
-    return row.map(function (cell) {
-      var s = String(cell == null ? '' : cell).replace(/"/g, '""');
-      return '"' + s + '"';
-    }).join(',');
-  }).join('\r\n');
+  try {
+    var csv = rows.map(function (row) {
+      return row.map(function (cell) {
+        var s = String(cell == null ? '' : cell).replace(/"/g, '""');
+        return '"' + s + '"';
+      }).join(',');
+    }).join('\r\n');
 
-  /* BOM agar Excel bisa baca karakter Indonesia */
-  var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'laporan_' + (d.preset || 'custom') + '_' + d.tanggalCetak + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'laporan_' + (d.preset || 'custom') + '_' + d.tanggalCetak + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('exportCSV gagal:', err);
+    alert('Gagal membuat file CSV: ' + err.message);
+  }
 }
