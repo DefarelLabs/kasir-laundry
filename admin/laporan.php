@@ -566,7 +566,7 @@ window.laporanData = <?= json_encode([
     'totalPendapatan'   => $totalPendapatan,
     'totalDeposit'      => $totalDeposit,
     'totalPiutang'      => $totalPiutang,
-    'uangDiterima'      => $uangDiterima,     // ← ganti nama key
+    'uangDiterima'      => $uangDiterima,    
     'totalPengeluaran'  => $totalPengeluaran,
     'labaBersih'        => $labaBersih,
     'transaksi'         => $exportTransaksi,
