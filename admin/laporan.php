@@ -563,11 +563,11 @@ window.laporanData = <?= json_encode([
     'periodeLabel'      => $periodeLabel,
     'preset'            => $preset,
     'tanggalCetak'      => date('Ymd'),
-    'totalPendapatan'   => (float)$ringkas['total_pendapatan'],
-    'totalDeposit'      => $totalDeposit,      // ← tambahan
-    'totalPiutang'      => $totalPiutang,      // ← tambahan
-    'pendapatanDiambil' => $pendapatanDiambil,
-    'totalPengeluaran'  => (float)$dataPengeluaran['total_pengeluaran'],
+    'totalPendapatan'   => $totalPendapatan,
+    'totalDeposit'      => $totalDeposit,
+    'totalPiutang'      => $totalPiutang,
+    'uangDiterima'      => $uangDiterima,     // ← ganti nama key
+    'totalPengeluaran'  => $totalPengeluaran,
     'labaBersih'        => $labaBersih,
     'transaksi'         => $exportTransaksi,
     'pengeluaran'       => $exportPengeluaran,
