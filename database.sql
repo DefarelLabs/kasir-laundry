@@ -154,7 +154,7 @@ CREATE TABLE `v_transaksi_lengkap` (
 --
 DROP TABLE IF EXISTS `v_transaksi_lengkap`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_transaksi_lengkap`  AS SELECT `t`.`id` AS `id`, `t`.`no_nota` AS `no_nota`, `t`.`nama_pelanggan` AS `nama_pelanggan`, `t`.`total_harga` AS `total_harga`, `t`.`tanggal_masuk` AS `tanggal_masuk`, `t`.`tanggal_selesai` AS `tanggal_selesai`, `t`.`status` AS `status`, `t`.`catatan` AS `catatan`, `t`.`created_at` AS `created_at`, count(`d`.`id`) AS `jumlah_item`, group_concat(`d`.`nama_layanan` separator ', ') AS `daftar_layanan` FROM (`transaksi` `t` left join `transaksi_detail` `d` on(`d`.`transaksi_id` = `t`.`id`)) GROUP BY `t`.`id` ;
+CREATE VIEW `v_transaksi_lengkap`  AS SELECT `t`.`id` AS `id`, `t`.`no_nota` AS `no_nota`, `t`.`nama_pelanggan` AS `nama_pelanggan`, `t`.`total_harga` AS `total_harga`, `t`.`tanggal_masuk` AS `tanggal_masuk`, `t`.`tanggal_selesai` AS `tanggal_selesai`, `t`.`status` AS `status`, `t`.`catatan` AS `catatan`, `t`.`created_at` AS `created_at`, count(`d`.`id`) AS `jumlah_item`, group_concat(`d`.`nama_layanan` separator ', ') AS `daftar_layanan` FROM (`transaksi` `t` left join `transaksi_detail` `d` on(`d`.`transaksi_id` = `t`.`id`)) GROUP BY `t`.`id` ;
 
 --
 -- Indexes for dumped tables
