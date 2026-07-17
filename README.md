@@ -14,20 +14,25 @@
 - Kalkulasi harga **real-time** (Jumlah × Harga/Kilo atau Harga/Satuan), dijumlah otomatis dari seluruh layanan di keranjang
 - Nomor nota otomatis: format `PL-YYYYMMDD-001`
 - Tanggal selesai dihitung otomatis dari durasi layanan **terlama** di antara layanan yang dipilih dalam 1 nota
-- Cetak nota **1 lembar** (pelanggan) atau **2 lembar** (pelanggan + arsip), menampilkan seluruh layanan dalam nota tersebut berurutan ke bawah beserta total keseluruhan
+- **💵 Deposit / Uang Muka (DP)**: input opsional saat transaksi dibuat — kolom "Sisa Bayar" terkalkulasi otomatis secara *real-time* (Total − Deposit) begitu kasir mengetik nominal DP
+- Cetak nota **1 lembar** (pelanggan) atau **2 lembar** (pelanggan + arsip), menampilkan seluruh layanan dalam nota tersebut berurutan ke bawah beserta total keseluruhan, **Deposit**, dan **Sisa Tagihan** (jika ada DP)
 
 ### 📊 Dashboard Admin
 - Filter transaksi per tanggal — bisa mundur ke hari sebelumnya
 - Statistik harian: jumlah order, pendapatan, **Total Berat (kg)** dan **Total Satuan (pcs) dipisah** (tidak lagi digabung jadi satu angka)
+- **⚠️ Kartu "Sisa Piutang"**: total tagihan yang belum lunas pada hari yang difilter, beserta total deposit yang sudah masuk
 - Ringkasan status: Pending / Selesai / Diambil
 - Kolom "Layanan" dan "Berat/Pcs" pada tabel daftar order menampilkan **seluruh layanan dalam 1 nota** (bisa lebih dari satu baris per transaksi)
+- Kolom **"Status Bayar"** pada tabel daftar order — badge ✅ Lunas atau nominal sisa tagihan per nota
 
 ### 📋 Data Transaksi
-- Filter per **bulan** atau **tanggal tertentu**
+- Filter per **bulan** atau **tanggal tertentu**, plus filter **Status Bayar** (Lunas / Belum Lunas)
 - Pencarian nama pelanggan / nomor nota
 - Update status langsung dari tabel (dropdown inline)
-- **✏️ Edit transaksi** — ubah Nama Pelanggan dan Catatan langsung lewat modal popup (untuk mengubah daftar layanan/berat dalam nota, hapus transaksi lalu buat ulang lewat halaman Kasir)
+- **✅ Status "Diambil" = otomatis lunas** — begitu status transaksi diubah menjadi **Diambil**, sisa tagihan otomatis di-nolkan (dianggap pelanggan sudah membayar penuh saat mengambil cucian); kalau status diubah kembali ke Pending/Selesai, sisa tagihan dihitung ulang dari `total_harga − deposit`
+- **✏️ Edit transaksi** — ubah Nama Pelanggan, Catatan, daftar layanan/berat, **dan Deposit** langsung lewat modal popup (sisa bayar otomatis dihitung ulang saat total atau deposit berubah)
 - **🗑️ Hapus transaksi** — dengan dialog konfirmasi sebelum data dihapus permanen (menghapus header otomatis menghapus seluruh detail layanannya)
+- Kolom **Deposit** dan **Status Bayar** (✅ Lunas / sisa tagihan) pada tabel, plus kartu **Total Piutang** di atas tabel
 - Statistik **Total Berat** dan **Total Satuan** ditampilkan terpisah sesuai periode filter
 - Cetak ulang nota dari halaman ini
 
@@ -43,13 +48,17 @@
 
 ### 📈 Laporan
 - Preset cepat: Hari Ini, 1 Minggu, 2 Minggu, 1 Bulan, atau Custom
-- **Ringkasan keuangan dua lapis:**
+- **Ringkasan keuangan (5 kartu):**
   - **Pendapatan Kotor** — dijumlah dari *semua* transaksi (status Pending, Selesai, maupun Diambil)
-  - **Pendapatan Bersih** — hanya dihitung dari transaksi berstatus **Diambil** (dianggap sudah lunas), dikurangi Total Pengeluaran
+  - **Deposit Diterima** — total seluruh uang muka yang sudah masuk pada periode tersebut
+  - **Piutang Belum Lunas** — total sisa tagihan dari transaksi yang belum berstatus Diambil
+  - **Total Pengeluaran** — akumulasi pengeluaran operasional periode tersebut
+  - **Laba Bersih** — *Uang Diterima* (transaksi **Diambil** dihitung penuh dari `total_harga` + transaksi lain dihitung dari **deposit**-nya saja, supaya tidak dobel-hitung) dikurangi Total Pengeluaran
+- **🧾 Daftar Piutang Belum Lunas** — tabel rinci nota yang masih punya sisa tagihan pada periode tersebut, lengkap dengan total, deposit, dan sisa tagihan per nota
 - Rekap per hari dan per jenis layanan, dengan **Berat (kg)** dan **Satuan (pcs)** ditampilkan terpisah
 - Top 5 pelanggan terbanyak order
-- **Export CSV** untuk dianalisis di Excel (BOM UTF-8, siap dibuka langsung) — 1 baris CSV mewakili 1 layanan (bukan 1 nota), sehingga nota dengan banyak layanan tetap tercatat rinci per layanan
-- Tampilan print-friendly
+- **Export CSV** untuk dianalisis di Excel (BOM UTF-8, siap dibuka langsung) — 1 baris CSV mewakili 1 layanan (bukan 1 nota), kini menyertakan kolom **Deposit** dan **Sisa Bayar** per baris, plus baris ringkasan Deposit/Piutang; dilengkapi validasi JSON supaya export tidak gagal diam-diam akibat karakter tidak biasa di catatan/nama
+- Tampilan print-friendly yang sudah disesuaikan ke ukuran kertas **A4** (font, grid, dan tabel otomatis mengecil saat dicetak/disimpan sebagai PDF agar tidak "kegedean" atau terpotong)
 
 ---
 
@@ -61,7 +70,7 @@
 | Database   | MySQL 5.7+ / MariaDB (via XAMPP)                             |
 | Frontend   | HTML5, CSS3 (Flexbox/Grid), Vanilla JavaScript (ES5 compat.) |
 | Fonts      | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans), [Source Code Pro](https://fonts.google.com/specimen/Source+Code+Pro) (Google Fonts) |
-| Print      | CSS `@media print`, kertas thermal 80mm                      |
+| Print      | CSS `@media print` — nota kertas thermal 80mm, laporan disesuaikan ke A4 |
 | Keamanan   | bcrypt password hash, PDO prepared statements, session login (juga melindungi halaman Kasir) |
 
 ---
@@ -179,13 +188,35 @@ Setiap layanan yang dipilih dalam 1 nota tersimpan sebagai 1 baris di `transaksi
 
 ---
 
+## 💳 Deposit / Uang Muka (DP) & Piutang
+
+Setiap transaksi bisa diberi **deposit** (uang muka) saat dibuat di halaman Kasir, atau diubah kemudian lewat menu Edit di **Data Transaksi**. Sistem menyimpan 2 kolom di tabel `transaksi`:
+
+- `deposit` — nominal uang muka yang sudah dibayar pelanggan
+- `sisa_bayar` — otomatis dihitung sebagai `total_harga − deposit`
+
+**Aturan status "Diambil" = otomatis lunas:**
+
+| Perubahan Status                          | Efek pada `sisa_bayar`                              |
+|--------------------------------------------|------------------------------------------------------|
+| → **Diambil**                              | Otomatis di-set **0** (dianggap pelanggan sudah melunasi sisa tagihan saat mengambil cucian) |
+| → Pending / Selesai (termasuk dari Diambil ke status lain) | Dihitung ulang dari `total_harga − deposit`          |
+
+Dengan aturan ini, kasir **tidak perlu** mengubah nominal deposit secara manual agar suatu nota tercatat lunas — cukup ubah status transaksinya menjadi **Diambil**, dan **Total Piutang** di Dashboard, Data Transaksi, maupun Laporan akan otomatis berkurang.
+
+Nota cetak (`print_nota.php`) juga menampilkan baris **"Deposit / Dibayar"** dan **"Sisa Tagihan"** (atau **"LUNAS"**) di bawah Total, tapi hanya muncul jika nota tersebut memang punya deposit.
+
+---
+
 ## 💵 Logika Perhitungan Keuangan (Laporan)
 
-| Metrik                | Cakupan Status Transaksi                          | Keterangan                                      |
-|------------------------|----------------------------------------------------|--------------------------------------------------|
-| **Pendapatan Kotor**   | Pending + Selesai + Diambil (semua transaksi)      | Menggambarkan seluruh order yang masuk pada periode tersebut, terlepas dari status pembayaran |
-| **Pendapatan Bersih**  | Hanya **Diambil**                                  | Diasumsikan hanya transaksi berstatus Diambil yang sudah benar-benar lunas |
-| **Laba Bersih**        | Pendapatan Bersih − Total Pengeluaran              | Angka laba riil yang bisa dijadikan acuan operasional |
+| Metrik                     | Cakupan Status Transaksi                                                                 | Keterangan                                                                 |
+|------------------------------|--------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| **Pendapatan Kotor**         | Pending + Selesai + Diambil (semua transaksi)                                              | Menggambarkan seluruh order yang masuk pada periode tersebut, terlepas dari status pembayaran |
+| **Deposit Diterima**         | Semua transaksi, dijumlah dari kolom `deposit`                                              | Total uang muka yang benar-benar sudah masuk pada periode tersebut          |
+| **Piutang Belum Lunas**      | Semua transaksi **selain Diambil**, dijumlah dari kolom `sisa_bayar`                        | Sisa tagihan yang masih harus ditagih ke pelanggan                          |
+| **Uang Diterima** (dasar Laba Bersih) | **Diambil** → dihitung penuh dari `total_harga`. **Selain Diambil** → dihitung hanya dari `deposit` | Mencegah deposit dihitung dobel: begitu status jadi Diambil, deposit "melebur" jadi bagian pelunasan penuh, bukan ditambahkan lagi ke total_harga |
+| **Laba Bersih**              | Uang Diterima − Total Pengeluaran                                                           | Angka laba riil (uang yang sudah benar-benar di tangan) yang bisa dijadikan acuan operasional |
 
 ---
 
@@ -214,7 +245,7 @@ Tips cetak via browser:
 |------------------------|-------------------------------------------------------------------------------------------|
 | `admin`                | Akun admin dengan password bcrypt                                                         |
 | `layanan`               | Jenis layanan: kode, nama, harga, **tipe_hitungan** (kilo/satuan), durasi, status aktif  |
-| `transaksi`             | **Header** nota: nama pelanggan, total harga (dijumlah dari semua layanan di nota), tanggal, status, catatan |
+| `transaksi`             | **Header** nota: nama pelanggan, total harga (dijumlah dari semua layanan di nota), **deposit**, **sisa_bayar**, tanggal, status, catatan |
 | `transaksi_detail`      | **Detail** nota: 1 baris per layanan yang dipilih dalam 1 nota (nama layanan, tipe_hitungan, jumlah, harga_per_unit, subtotal — snapshot dari layanan saat transaksi dibuat) |
 | `pengeluaran`           | Catatan pengeluaran operasional harian                                                    |
 | `v_transaksi_lengkap`   | View: header `transaksi` + ringkasan jumlah item & daftar nama layanan (`GROUP_CONCAT`) per nota |
@@ -227,6 +258,8 @@ tipe_hitungan ENUM('kilo','satuan') NOT NULL DEFAULT 'kilo'
 ### Kolom penting di tabel `transaksi` (Header)
 ```sql
 total_harga      DECIMAL(12,0) NOT NULL   -- total gabungan seluruh layanan di nota ini
+deposit          DECIMAL(12,0) NOT NULL DEFAULT 0   -- uang muka / DP yang sudah dibayar
+sisa_bayar       DECIMAL(12,0) NOT NULL DEFAULT 0   -- total_harga - deposit; otomatis jadi 0 saat status = 'diambil'
 tanggal_selesai  DATETIME      NOT NULL   -- dihitung dari durasi layanan TERLAMA di nota
 ```
 
@@ -240,6 +273,13 @@ subtotal        DECIMAL(12,0)  NOT NULL   -- jumlah × harga_per_unit, untuk lay
 ```
 
 > 🔁 **Migrasi dari versi lama:** jika sebelumnya tabel `transaksi` Anda masih memiliki kolom `layanan_id`, `berat_kg`, `berat_pcs`, `tipe_hitungan`, `harga_per_kg` langsung (1 transaksi = 1 layanan), gunakan `migration_multi_layanan.sql` untuk memindahkan data lama ke `transaksi_detail` sebelum kolom-kolom tersebut dihapus dari `transaksi`.
+
+> 💳 **Migrasi untuk menambahkan fitur Deposit:** jika database Anda sudah ada datanya dan belum punya kolom `deposit`/`sisa_bayar`, jalankan query berikut di tab SQL phpMyAdmin (tidak perlu install ulang dari nol):
+> ```sql
+> ALTER TABLE `transaksi`
+>   ADD COLUMN `deposit`    DECIMAL(12,0) NOT NULL DEFAULT 0 AFTER `total_harga`,
+>   ADD COLUMN `sisa_bayar` DECIMAL(12,0) NOT NULL DEFAULT 0 AFTER `deposit`;
+> ```
 
 ---
 
