@@ -19,7 +19,7 @@ echo '<h2 style="color:#2e7d32">✅ Setup Selesai!</h2>';
 echo '<p style="margin-top:12px">Password admin berhasil diatur.</p>';
 echo '<table style="margin-top:16px;border-collapse:collapse;width:100%">';
 echo '<tr><td style="padding:6px;font-weight:bold">Username</td><td>admin</td></tr>';
-echo '<tr><td style="padding:6px;font-weight:bold">Password</td><td>admin123</td></tr>';
+echo '<tr><td style="padding:6px;font-weight:bold">Password</td><td>' . htmlspecialchars($password) . '</td></tr>';
 echo '</table>';
 echo '<p style="margin-top:20px;color:#c62828;font-weight:bold">⚠️ Segera hapus file setup.php ini setelah selesai!</p>';
 echo '<p style="margin-top:12px"><a href="admin/login.php" style="background:#1565c0;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold">→ Pergi ke Halaman Login</a></p>';
