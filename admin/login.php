@@ -42,6 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Login Admin — Permana Laundry</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <!-- icon website -->
+  <link rel="icon" href="../assets/logo/logo.png"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Plus Jakarta Sans',sans-serif;background:linear-gradient(135deg,#0f2a4a 0%,#1565c0 60%,#00897b 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
