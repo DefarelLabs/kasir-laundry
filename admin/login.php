@@ -115,26 +115,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   </div>
   <script>
-    // Tangkap elemen ikon dan input-nya
-const togglePassword = document.getElementById('toggle-password');
-const password = document.getElementById('password');
+        // Tangkap elemen ikon dan input-nya
+    const togglePassword = document.getElementById('toggle-password');
+    const password = document.getElementById('password');
 
-// Tambahkan event saat ikon diklik
-togglePassword.addEventListener('click', function () {
-    
-    // Cek apakah tipenya saat ini adalah 'password'
-    if (password.type === 'password') {
-        // Jika ya, ubah jadi teks agar terlihat
-        password.type = 'text';
-        // Ganti ikon menjadi mata tertutup (opsional)
-        togglePassword.textContent = '👁️‍🗨️'; 
-    } else {
-        // Jika tidak, kembalikan menjadi password (titik-titik)
-        password.type = 'password';
-        // Kembalikan ikon ke mata terbuka
-        togglePassword.textContent = '👁️'; 
-    }
-});
+    // Tambahkan event saat ikon diklik
+    togglePassword.addEventListener('click', function () {
+        
+        // Cek apakah tipenya saat ini adalah 'password'
+        if (password.type === 'password') {
+            // Jika ya, ubah jadi teks agar terlihat
+            password.type = 'text';
+            // Ganti ikon menjadi mata tertutup (opsional)
+            togglePassword.textContent = '👁️‍🗨️'; 
+        } else {
+            // Jika tidak, kembalikan menjadi password (titik-titik)
+            password.type = 'password';
+            // Kembalikan ikon ke mata terbuka
+            togglePassword.textContent = '👁️'; 
+        }
+    });
   </script>
 </body>
 </html>
