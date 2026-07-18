@@ -63,8 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* Memosisikan ikon mata di sebelah kanan */
 .eye-icon {
     position: absolute;
-    right: 510px;
-    bottom: 273px;
     cursor: pointer;
     font-size: 18px;
     user-select: none; /* Mencegah ikon terblok biru saat diklik 2x */
@@ -76,11 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     opacity: 1; /* Efek menyala saat di-hover */
 }
 
-@media (max-width: 768px) {
-    .eye-icon {
-        right: 70px; /* Sesuaikan posisi untuk layar kecil */
-        bottom: 255px; /* Sesuaikan posisi untuk layar kecil */
-    }
+.password-wrapper {
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+}
+
   </style>
 </head>
 <body>
@@ -104,16 +104,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password"
-               placeholder="••••••••" autocomplete="current-password"/>
-        <span id="toggle-password" class="eye-icon" title="Tampilkan Password">👁️</span>
+        <div class="password-wrapper">
+          <input type="password" id="password" name="password"
+                  placeholder="••••••••" autocomplete="current-password"/>
+          <span id="toggle-password" class="eye-icon" title="Tampilkan Password" style="right: 10px;">👁️</span>
+        </div>
       </div>
       <button type="submit" class="btn-login">🔐 Masuk</button>
     </form>
 
-    <div class="back-link">
-      <a href="../index.php">← Kembali ke Kasir</a>
-    </div>
   </div>
   <script>
     // Tangkap elemen ikon dan input-nya
