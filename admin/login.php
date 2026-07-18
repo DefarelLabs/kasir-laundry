@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Login Admin — Permana</title>
+  <title>Login Admin — Permana Laundry</title>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login-box">
     <div class="login-logo">
       <div class="icon">🫧</div>
-      <h1>Permana</h1>
+      <h1>Permana Laundry</h1>
       <p>Masuk ke Panel Admin</p>
     </div>
 
