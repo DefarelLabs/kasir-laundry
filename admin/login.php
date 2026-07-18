@@ -127,7 +127,7 @@ togglePassword.addEventListener('click', function () {
         // Jika ya, ubah jadi teks agar terlihat
         password.type = 'text';
         // Ganti ikon menjadi mata tertutup (opsional)
-        togglePassword.textContent = '🙈'; 
+        togglePassword.textContent = '👁️‍🗨️'; 
     } else {
         // Jika tidak, kembalikan menjadi password (titik-titik)
         password.type = 'password';
