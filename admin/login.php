@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login-box">
     <div class="login-logo">
       <div class="icon">🫧</div>
-      <h1>Per</h1>
+      <h1>Permana Laundry</h1>
       <p>Masuk ke Panel Admin</p>
     </div>
 
