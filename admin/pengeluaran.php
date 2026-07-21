@@ -167,6 +167,12 @@ require_once '../includes/admin_header.php';
           </tfoot>
         </table>
       </div>
+      <?php if (count($pengeluaranList) > 5): ?>
+        <button type="button" class="btn-toggle-rows" id="btnToggleDaftarPengeluaran"
+                onclick="toggleRowsGeneric('tbodyDaftarPengeluaran','btnToggleDaftarPengeluaran','pengeluaran')">
+          ⬇️ Tampilkan Semua (<?= count($pengeluaranList) - 5 ?> pengeluaran lagi)
+        </button>
+      <?php endif; ?>
       <?php endif; ?>
     </div>
   </div>
