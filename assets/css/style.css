@@ -621,3 +621,22 @@ textarea { resize: vertical; }
   }
   .laporan-grid-2 { grid-template-columns: 1fr 1fr; }
 }
+
+
+
+.row-collapsible.is-hidden { display: none; }
+.btn-toggle-rows {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background: var(--gray-50);
+  border: 1px dashed var(--gray-200);
+  border-radius: 8px;
+  color: var(--blue-mid);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.btn-toggle-rows:hover { background: var(--blue-light); }
