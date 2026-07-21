@@ -400,9 +400,9 @@ require_once '../includes/admin_header.php';
     <div class="table-wrap">
       <table>
         <thead><tr><th>Tanggal</th><th>Order</th><th>Berat</th><th>Satuan</th><th>Pendapatan</th></tr></thead>
-          <tbody>
-            <?php foreach ($dataHarian as $h): ?>
-            <tr>
+          <tbody id="tbodyRekapHari">
+            <?php foreach ($dataHarian as $i => $h): ?>
+            <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
               <td><strong><?= tglIndoDate($h['tgl']) ?></strong></td>
               <td><?= $h['jml_order'] ?></td>
               <td><?= number_format($h['total_berat'],1) ?> kg</td>
@@ -422,8 +422,15 @@ require_once '../includes/admin_header.php';
           </tfoot>
       </table>
     </div>
-    <?php endif; ?>
-  </div>
+    </div>
+      <?php if (count($dataHarian) > 5): ?>
+        <button type="button" class="btn-toggle-rows" id="btnToggleRekapHari"
+                onclick="toggleRowsGeneric('tbodyRekapHari','btnToggleRekapHari','hari')">
+          ⬇️ Tampilkan Semua (<?= count($dataHarian) - 5 ?> hari lagi)
+        </button>
+      <?php endif; ?>
+      <?php endif; ?>
+    </div>
 
   <!-- Rekap per layanan -->
   <div class="card">
