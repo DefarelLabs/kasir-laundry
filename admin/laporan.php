@@ -458,6 +458,12 @@ require_once '../includes/admin_header.php';
       </tbody>
       </table>
     </div>
+    <?php if (count($dataLayanan) > 5): ?>
+      <button type="button" class="btn-toggle-rows" id="btnToggleRekapLayanan"
+              onclick="toggleRowsGeneric('tbodyRekapLayanan','btnToggleRekapLayanan','layanan')">
+        ⬇️ Tampilkan Semua (<?= count($dataLayanan) - 5 ?> layanan lagi)
+      </button>
+    <?php endif; ?>
     <?php endif; ?>
   </div>
 </div>
