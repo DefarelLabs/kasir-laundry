@@ -422,15 +422,14 @@ require_once '../includes/admin_header.php';
           </tfoot>
       </table>
     </div>
-    </div>
-      <?php if (count($dataHarian) > 5): ?>
-        <button type="button" class="btn-toggle-rows" id="btnToggleRekapHari"
-                onclick="toggleRowsGeneric('tbodyRekapHari','btnToggleRekapHari','hari')">
-          ⬇️ Tampilkan Semua (<?= count($dataHarian) - 5 ?> hari lagi)
-        </button>
-      <?php endif; ?>
-      <?php endif; ?>
-    </div>
+    <?php if (count($dataHarian) > 5): ?>
+      <button type="button" class="btn-toggle-rows" id="btnToggleRekapHari"
+              onclick="toggleRowsGeneric('tbodyRekapHari','btnToggleRekapHari','hari')">
+        ⬇️ Tampilkan Semua (<?= count($dataHarian) - 5 ?> hari lagi)
+      </button>
+    <?php endif; ?>
+    <?php endif; ?>
+  </div>
 
   <!-- Rekap per layanan -->
   <div class="card">
@@ -442,20 +441,20 @@ require_once '../includes/admin_header.php';
       <table>
         <thead><tr><th>Layanan</th><th>Order</th><th>Berat</th><th>Total</th></tr></thead>
         <tbody id="tbodyRekapLayanan">
-        <?php foreach ($dataLayanan as $i => $l): ?>
-        <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
-          <td>
-            <strong><?= htmlspecialchars($l['nama']) ?></strong>
-            <br/><span style="font-size:11px;color:var(--gray-400)"><?= htmlspecialchars($l['label_durasi']) ?></span>
-          </td>
-          <td><?= $l['jml'] ?></td>
-          <td><?= $l['tipe_hitungan'] === 'satuan'
-              ? number_format($l['total_satuan'],0) . ' pcs'
-              : number_format($l['total_berat'],1) . ' kg' ?></td>
-          <td><?= rupiah($l['total_harga']) ?></td>
-        </tr>
-        <?php endforeach; ?>
-      </tbody>
+          <?php foreach ($dataLayanan as $i => $l): ?>
+          <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
+            <td>
+              <strong><?= htmlspecialchars($l['nama']) ?></strong>
+              <br/><span style="font-size:11px;color:var(--gray-400)"><?= htmlspecialchars($l['label_durasi']) ?></span>
+            </td>
+            <td><?= $l['jml'] ?></td>
+            <td><?= $l['tipe_hitungan'] === 'satuan'
+                ? number_format($l['total_satuan'],0) . ' pcs'
+                : number_format($l['total_berat'],1) . ' kg' ?></td>
+            <td><?= rupiah($l['total_harga']) ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
       </table>
     </div>
     <?php if (count($dataLayanan) > 5): ?>
@@ -496,7 +495,7 @@ require_once '../includes/admin_header.php';
     </table>
   </div>
   <?php if (count($detailPengeluaran) > 5): ?>
-    <button type="button" class="btn-toggle-rows" id="btnToggleRows" onclick="toggleRowsPengeluaran()">
+    <button type="button" class="btn-toggle-rows" id="btnToggleRows" onclick="toggleRowsGeneric('tbodyPengeluaran','btnToggleRows','pengeluaran')">
       ⬇️ Tampilkan Semua (<?= count($detailPengeluaran) - 5 ?> lagi)
     </button>
   <?php endif; ?>
