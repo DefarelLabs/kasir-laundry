@@ -111,9 +111,9 @@ require_once '../includes/admin_header.php';
         </thead>
 ...
 
-        <tbody>
-          <?php foreach ($layananList as $l): ?>
-          <tr>
+        <tbody id="tbodyDaftarLayanan">
+          <?php foreach ($layananList as $i => $l): ?>
+          <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
             <td><code style="font-size:12px;background:var(--gray-100);padding:2px 6px;border-radius:4px"><?= htmlspecialchars($l['kode']) ?></code></td>
             <td><strong><?= htmlspecialchars($l['nama']) ?></strong></td>
             <td><?= rupiah($l['harga_per_kg']) ?> <span style="color:var(--gray-400);font-size:11px">/ <?= $l['tipe_hitungan']==='satuan' ? 'pcs' : 'kg' ?></span></td>
@@ -130,15 +130,19 @@ require_once '../includes/admin_header.php';
             <td style="white-space:nowrap">
               <a href="?edit=<?= $l['id'] ?>" class="btn btn-warning btn-sm">✏️ Edit</a>
               <a href="?hapus=<?= $l['id'] ?>" class="btn btn-danger btn-sm"
-                 onclick="return confirm('Hapus layanan ini?')">🗑️</a>
+                onclick="return confirm('Hapus layanan ini?')">🗑️</a>
             </td>
-
-
           </tr>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
+    <?php if (count($layananList) > 5): ?>
+      <button type="button" class="btn-toggle-rows" id="btnToggleDaftarLayanan"
+              onclick="toggleRowsGeneric('tbodyDaftarLayanan','btnToggleDaftarLayanan','layanan')">
+        ⬇️ Tampilkan Semua (<?= count($layananList) - 5 ?> layanan lagi)
+      </button>
+    <?php endif; ?>
   </div>
 
   <!-- Form tambah / edit -->
