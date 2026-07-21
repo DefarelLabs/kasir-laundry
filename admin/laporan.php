@@ -534,6 +534,12 @@ require_once '../includes/admin_header.php';
       </tfoot>
     </table>
   </div>
+  <?php if (count($daftarPiutang) > 5): ?>
+    <button type="button" class="btn-toggle-rows" id="btnTogglePiutang"
+            onclick="toggleRowsGeneric('tbodyPiutang','btnTogglePiutang','nota')">
+      ⬇️ Tampilkan Semua (<?= count($daftarPiutang) - 5 ?> nota lagi)
+    </button>
+  <?php endif; ?>
   <?php endif; ?>
 </div>
 
