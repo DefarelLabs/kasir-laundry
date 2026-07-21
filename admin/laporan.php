@@ -441,21 +441,21 @@ require_once '../includes/admin_header.php';
     <div class="table-wrap">
       <table>
         <thead><tr><th>Layanan</th><th>Order</th><th>Berat</th><th>Total</th></tr></thead>
-        <tbody>
-          <?php foreach ($dataLayanan as $l): ?>
-          <tr>
-            <td>
-              <strong><?= htmlspecialchars($l['nama']) ?></strong>
-              <br/><span style="font-size:11px;color:var(--gray-400)"><?= htmlspecialchars($l['label_durasi']) ?></span>
-            </td>
-            <td><?= $l['jml'] ?></td>
-            <td><?= $l['tipe_hitungan'] === 'satuan'
-                ? number_format($l['total_satuan'],0) . ' pcs'
-                : number_format($l['total_berat'],1) . ' kg' ?></td>
-            <td><?= rupiah($l['total_harga']) ?></td>
-          </tr>
-          <?php endforeach; ?>
-        </tbody>
+        <tbody id="tbodyRekapLayanan">
+        <?php foreach ($dataLayanan as $i => $l): ?>
+        <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
+          <td>
+            <strong><?= htmlspecialchars($l['nama']) ?></strong>
+            <br/><span style="font-size:11px;color:var(--gray-400)"><?= htmlspecialchars($l['label_durasi']) ?></span>
+          </td>
+          <td><?= $l['jml'] ?></td>
+          <td><?= $l['tipe_hitungan'] === 'satuan'
+              ? number_format($l['total_satuan'],0) . ' pcs'
+              : number_format($l['total_berat'],1) . ' kg' ?></td>
+          <td><?= rupiah($l['total_harga']) ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
       </table>
     </div>
     <?php endif; ?>
