@@ -513,9 +513,9 @@ require_once '../includes/admin_header.php';
   <div class="table-wrap">
     <table>
       <thead><tr><th>No. Nota</th><th>Pelanggan</th><th>Total</th><th>Deposit</th><th>Sisa Tagihan</th><th>Tgl Masuk</th></tr></thead>
-      <tbody>
-        <?php foreach ($daftarPiutang as $p): ?>
-        <tr>
+      <tbody id="tbodyPiutang">
+        <?php foreach ($daftarPiutang as $i => $p): ?>
+        <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
           <td><code style="font-size:11px;background:var(--gray-100);padding:2px 5px;border-radius:4px"><?= htmlspecialchars($p['no_nota']) ?></code></td>
           <td><strong><?= htmlspecialchars($p['nama_pelanggan']) ?></strong></td>
           <td><?= rupiah($p['total_harga']) ?></td>
