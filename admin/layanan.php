@@ -175,13 +175,13 @@ require_once '../includes/admin_header.php';
       </div>
 
       <div class="form-group">
-  <label class="lbl">Tipe Hitungan <span style="color:red">*</span></label>
-  <select name="tipe_hitungan">
-    <option value="kilo"   <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'kilo'   ? 'selected' : '' ?>>⚖️ Kilo (kg)</option>
-    <option value="satuan" <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'selected' : '' ?>>🔢 Satuan (pcs)</option>
-  </select>
-  <small style="color:var(--gray-400);font-size:12px">Kilo = berat desimal (cth: 3.5 kg). Satuan = jumlah bulat (cth: 5 pcs).</small>
-</div>
+        <label class="lbl">Tipe Hitungan <span style="color:red">*</span></label>
+        <select name="tipe_hitungan">
+          <option value="kilo"   <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'kilo'   ? 'selected' : '' ?>>⚖️ Kilo (kg)</option>
+          <option value="satuan" <?= ($editData['tipe_hitungan'] ?? 'kilo') === 'satuan' ? 'selected' : '' ?>>🔢 Satuan (pcs)</option>
+        </select>
+        <small style="color:var(--gray-400);font-size:12px">Kilo = berat desimal (cth: 3.5 kg). Satuan = jumlah bulat (cth: 5 pcs).</small>
+      </div>
 
       <div class="grid-2">
         <div class="form-group">
