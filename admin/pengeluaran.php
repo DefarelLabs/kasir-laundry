@@ -141,9 +141,9 @@ require_once '../includes/admin_header.php';
       <div class="table-wrap pengeluaran-table-wrap">
         <table>
           <thead><tr><th>#</th><th>Tanggal</th><th>Keterangan</th><th>Jumlah</th><th>Catatan</th><th>Aksi</th></tr></thead>
-          <tbody>
+          <tbody id="tbodyDaftarPengeluaran">
             <?php foreach ($pengeluaranList as $i => $p): ?>
-            <tr>
+            <tr class="row-collapsible <?= $i >= 5 ? 'is-hidden' : '' ?>">
               <td style="color:var(--gray-400);font-size:12px"><?= $i+1 ?></td>
               <td style="white-space:nowrap;font-size:13px"><strong><?= tglIndoDate($p['tanggal']) ?></strong></td>
               <td><strong><?= htmlspecialchars($p['keterangan']) ?></strong></td>
@@ -151,9 +151,9 @@ require_once '../includes/admin_header.php';
               <td style="font-size:12px;color:var(--gray-600)"><?= $p['catatan'] ? htmlspecialchars($p['catatan']) : '<span style="color:var(--gray-400)">—</span>' ?></td>
               <td style="white-space:nowrap">
                 <a href="?edit=<?= $p['id'] ?>&mode=<?= $filterMode ?>&bulan=<?= htmlspecialchars($filterBulan) ?>&tgl=<?= htmlspecialchars($filterTgl) ?>"
-                   class="btn btn-warning btn-sm">✏️</a>
+                  class="btn btn-warning btn-sm">✏️</a>
                 <a href="?hapus=<?= $p['id'] ?>" class="btn btn-danger btn-sm"
-                   onclick="return confirm('Hapus pengeluaran ini?')">🗑️</a>
+                  onclick="return confirm('Hapus pengeluaran ini?')">🗑️</a>
               </td>
             </tr>
             <?php endforeach; ?>
