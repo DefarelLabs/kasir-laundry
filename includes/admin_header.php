@@ -33,7 +33,7 @@ if (!defined('BASE_URL_ASSETS')) {
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"/>
 
   <!-- ✅ External stylesheet (ekstrak dari <style> yang dulu inline) -->
-  <link rel="stylesheet" href="<?= BASE_URL_ASSETS ?>/css/style.css"/>
+  <link rel="stylesheet" href="<?= BASE_URL_ASSETS ?>/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>"/>
   <!-- icon website -->
   <link rel="icon" href="../assets/logo/logo.png"/>
 </head>
@@ -92,4 +92,4 @@ if (!defined('BASE_URL_ASSETS')) {
     <?php endif; ?>
 
     <!-- ✅ External script dimuat di sini agar DOM sudah siap -->
-    <script src="<?= BASE_URL_ASSETS ?>/js/script.js"></script>
+    <script src="<?= BASE_URL_ASSETS ?>/js/script.js?v=<?= filemtime(__DIR__ . '/../assets/js/script.js') ?>"></script>
